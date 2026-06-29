@@ -12,6 +12,7 @@ public class TheMercenarius : ModuleRules
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 
+		PublicIncludePaths.AddRange(new string[] { "TheMercenarius", });
 		// Uncomment if you are using Slate UI
 		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
 		
