@@ -6,6 +6,11 @@
 #include "GameFramework/Pawn.h"
 #include "TMCharacterBase.generated.h"
 
+class UCapsuleComponent;
+class USkeletalMeshComponent;
+class USpringArmComponent;
+class UCameraComponent;
+
 UCLASS()
 class THEMERCENARIUS_API ATMCharacterBase : public APawn
 {
@@ -14,4 +19,18 @@ class THEMERCENARIUS_API ATMCharacterBase : public APawn
 public:
 	// Sets default values for this pawn's properties
 	ATMCharacterBase();
+
+private:
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerComponent")
+	TObjectPtr<UCapsuleComponent>capsuleComponent;
+
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerComponent")
+	TObjectPtr<USkeletalMeshComponent>skeletalMeshComponent;
+
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerComponent")
+	TObjectPtr<USpringArmComponent>springArmComponent;
+
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerComponent")
+	TObjectPtr<UCameraComponent>cameraComponent;
+
 };
