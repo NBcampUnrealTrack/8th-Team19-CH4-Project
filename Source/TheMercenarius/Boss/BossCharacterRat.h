@@ -7,7 +7,7 @@
 #include "BossCharacterRat.generated.h"
 
 UCLASS()
-class BOSS_API ABossCharacterRat : public ACharacter
+class THEMERCENARIUS_API ABossCharacterRat : public ACharacter
 {
 	GENERATED_BODY()
 

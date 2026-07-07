@@ -1,13 +1,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Character/TMCharacterBase.h" // 부모 클래스 헤더 포함
+#include "Character/TMPlayerBase.h" // 부모 클래스 헤더 포함
 #include "TMPawn_Warrior.generated.h"
 
 class UTMStatComponent;
 
 UCLASS()
-class THEMERCENARIUS_API ATMPawn_Warrior : public ATMCharacterBase
+class THEMERCENARIUS_API ATMPawn_Warrior : public ATMPlayerBase
 {
 	GENERATED_BODY()
 
