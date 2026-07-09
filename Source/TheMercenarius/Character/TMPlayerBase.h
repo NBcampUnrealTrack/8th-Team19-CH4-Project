@@ -20,7 +20,13 @@ public:
 
 	virtual void Tick(float DeltaTime) override;
 
-	void SetMoveToTarget(const FVector& NewTarget);
+	void SetMoveToTarget(const FVector& newTarget);
+
+	void DashToTarget(const FVector& newTarget);
+
+	void StartDash();
+
+	void StopDash();
 private:
 	UPROPERTY(EditDefaultsOnly, Category = "PlayerComponent")
 	TObjectPtr<USpringArmComponent>springArmComponent;
@@ -33,5 +39,17 @@ private:
 
 	FVector targetLocation;
 
+	FVector dashLocation;
+
+	FVector moveVector;
+
+	FVector playerActorLocation;
+
 	bool bIsMovingToTarget;
+
+	bool bIsDashToTarget;
+protected:
+	UPROPERTY(EditAnywhere, Category = "Movement")
+	float dashRange;
+
 };

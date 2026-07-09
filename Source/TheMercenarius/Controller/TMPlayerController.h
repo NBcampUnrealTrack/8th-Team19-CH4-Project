@@ -27,8 +27,12 @@ protected:
 private:
 	void InputMove(const FInputActionValue& inValue);
 
+	void InputSpace(const FInputActionValue& inValue);
 protected:
 	void MoveToDestination(FVector destination);
+
+	void MoveToDash(FVector destination);
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TObjectPtr<UTMInputConfig>playerInputConfig;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)

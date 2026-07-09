@@ -26,15 +26,25 @@ void ATMPlayerController::SetupInputComponent()
 	if (IsValid(enhancedInputComponent) == true)
 	{
 		enhancedInputComponent->BindAction(playerInputConfig->move, ETriggerEvent::Triggered, this, &ThisClass::InputMove);
+		enhancedInputComponent->BindAction(playerInputConfig->space, ETriggerEvent::Started, this, &ThisClass::InputSpace);
 	}
 }
 
 void ATMPlayerController::InputMove(const FInputActionValue& inValue)
 {
 	FHitResult hitResult;
-	if (GetHitResultUnderCursor(ECC_Visibility, true, hitResult))
+	if (GetHitResultUnderCursor(ECC_Visibility, false, hitResult))
 	{
-		MoveToDestination(hitResult.ImpactPoint);
+		MoveToDestination(hitResult.Location);
+	}
+}
+
+void ATMPlayerController::InputSpace(const FInputActionValue& inValue)
+{
+	FHitResult hitResult;
+	if (GetHitResultUnderCursor(ECC_Visibility, false, hitResult))
+	{
+		MoveToDash(hitResult.Location);
 	}
 }
 
@@ -44,5 +54,14 @@ void ATMPlayerController::MoveToDestination(FVector destination)
 	if (IsValid(playerCharacter) == true)
 	{
 		playerCharacter->SetMoveToTarget(destination);
+	}
+}
+
+void ATMPlayerController::MoveToDash(FVector destination)
+{
+	ATMPlayerBase* playerCharacter = Cast<ATMPlayerBase>(GetPawn());
+	if (IsValid(playerCharacter) == true)
+	{
+		playerCharacter->DashToTarget(destination);
 	}
 }

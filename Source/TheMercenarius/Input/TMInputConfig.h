@@ -18,4 +18,7 @@ class THEMERCENARIUS_API UTMInputConfig : public UDataAsset
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TObjectPtr<UInputAction> move;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TObjectPtr<UInputAction> space;
 };

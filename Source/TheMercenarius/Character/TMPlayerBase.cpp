@@ -9,11 +9,10 @@
 #include "Kismet/KismetSystemLibrary.h"
 
 // Sets default values
-ATMPlayerBase::ATMPlayerBase() : bIsMovingToTarget(false), arriveToIerance(5.f)
+ATMPlayerBase::ATMPlayerBase() : bIsMovingToTarget(false), bIsDashToTarget(false), arriveToIerance(5.f), dashRange(500.f)
 {
 	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-	//arriveToIerance = 3.f;
 	float capsuleHalfHeight = 90.f;
 	float capsuleRadius = 40.f;
 	float armLength = 800.f;
@@ -52,10 +51,22 @@ ATMPlayerBase::ATMPlayerBase() : bIsMovingToTarget(false), arriveToIerance(5.f)
 void ATMPlayerBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
-	if (bIsMovingToTarget == true)
+	if (bIsDashToTarget == true)
 	{
+		AddMovementInput(moveVector, 1.0f);
+		float travelledDistance = FVector::Dist(playerActorLocation, GetActorLocation());
 
+		if (travelledDistance >= dashRange)
+		{
+			StopDash();
+		}
+	}
+	if (bIsMovingToTarget == true && bIsDashToTarget == false)
+	{
+		if (bIsDashToTarget == true)
+		{
+			return;
+		}
 		FVector currentLocation = GetActorLocation();
 		FString actorLocation = FString::Printf(TEXT("ActorLocation : X = %.f, Y = %.f, Z = %.f"), currentLocation.X, currentLocation.Y, currentLocation.Z);
 		float distanceToTarget = FVector::Dist(currentLocation, targetLocation);
@@ -86,4 +97,29 @@ void ATMPlayerBase::SetMoveToTarget(const FVector& NewTarget)
 	bIsMovingToTarget = true;
 	FString targetVector = FString::Printf(TEXT("Tarrget Location : X = %f, Y = %f, Z = %f"), targetLocation.X, targetLocation.Y, targetLocation.Z);
 	UKismetSystemLibrary::PrintString(this, targetVector, true, true, FLinearColor::Red, 10.f);
+}
+
+void ATMPlayerBase::DashToTarget(const FVector& newTarget)
+{
+	if (bIsDashToTarget == true)
+	{
+		return;
+	}
+	dashLocation = FVector(newTarget.X, newTarget.Y, GetActorLocation().Z);
+	playerActorLocation = GetActorLocation();
+	moveVector = (dashLocation - playerActorLocation).GetSafeNormal2D();
+	bIsDashToTarget = true;
+	
+	GetCharacterMovement()->MaxWalkSpeed = 800.f;
+
+	FString targetVector = FString::Printf(TEXT("Tarrget Location : X = %f, Y = %f, Z = %f"), dashLocation.X, dashLocation.Y, dashLocation.Z);
+	UKismetSystemLibrary::PrintString(this, targetVector, true, true, FLinearColor::White, 10.f);
+}
+
+void ATMPlayerBase::StopDash()
+{
+	bIsDashToTarget = false;
+	bIsMovingToTarget = false;
+	GetCharacterMovement()->MaxWalkSpeed = 350.f;
+	GetCharacterMovement()->StopMovementImmediately();
 }
