@@ -608,10 +608,6 @@ void ABossCharacterRat::OnRep_IsPhase2()
 		DamageAuraWarningMesh->SetHiddenInGame(false);
 		DamageAuraWarningMesh->SetVisibility(true, true);
 
-		DamageAuraWarningMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 200.0f));
-		DamageAuraWarningMesh->SetRelativeRotation(FRotator(0.0f, 0.0f, 0.0f));
-		DamageAuraWarningMesh->SetRelativeScale3D(FVector(5.0f, 5.0f, 5.0f));
-
 		UE_LOG(LogTemp, Warning, TEXT("Aura Mesh forced visible"));
 		UE_LOG(LogTemp, Warning, TEXT("Aura Mesh Asset: %s"),
 			DamageAuraWarningMesh->GetStaticMesh() ? *DamageAuraWarningMesh->GetStaticMesh()->GetName() : TEXT("None")
