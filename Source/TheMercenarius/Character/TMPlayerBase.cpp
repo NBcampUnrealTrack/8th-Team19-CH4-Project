@@ -7,6 +7,7 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Animation/AnimInstance.h"
 
 // Sets default values
 ATMPlayerBase::ATMPlayerBase() : bIsMovingToTarget(false), bIsDashToTarget(false), arriveToIerance(5.f), dashRange(500.f)
@@ -111,6 +112,17 @@ void ATMPlayerBase::DashToTarget(const FVector& newTarget)
 	bIsDashToTarget = true;
 	
 	GetCharacterMovement()->MaxWalkSpeed = 800.f;
+
+	// --- 대시 애니메이션 재생 로직 추가 ---
+	if (DashMontage)
+	{
+		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+		if (AnimInstance)
+		{
+			AnimInstance->Montage_Play(DashMontage);
+		}
+	}
+	// ------------------------------------
 
 	FString targetVector = FString::Printf(TEXT("Tarrget Location : X = %f, Y = %f, Z = %f"), dashLocation.X, dashLocation.Y, dashLocation.Z);
 	UKismetSystemLibrary::PrintString(this, targetVector, true, true, FLinearColor::White, 10.f);

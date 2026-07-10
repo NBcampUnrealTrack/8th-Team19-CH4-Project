@@ -52,7 +52,7 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UAnimMontage> SkillRMontage;
 
-
+ 
 	/* ---------------------------------------------------------
 	 * 스킬 실행 함수
 	 * --------------------------------------------------------- */

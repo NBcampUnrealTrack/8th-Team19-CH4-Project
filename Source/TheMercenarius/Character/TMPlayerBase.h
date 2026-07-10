@@ -8,6 +8,7 @@
 
 class USpringArmComponent;
 class UCameraComponent;
+class UAnimMontage;//에니메이션 추가
 
 UCLASS()
 class THEMERCENARIUS_API ATMPlayerBase : public ACharacter
@@ -52,4 +53,6 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Movement")
 	float dashRange;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")//스페이스 사용 에니메이션 몽타주
+	TObjectPtr<UAnimMontage> DashMontage;
 };
