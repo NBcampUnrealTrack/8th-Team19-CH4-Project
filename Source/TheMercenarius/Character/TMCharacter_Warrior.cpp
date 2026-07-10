@@ -1,12 +1,11 @@
 #include "TMCharacter_Warrior.h"
 #include "Game/TMStatComponent.h"
-#include "GameFramework/CharacterMovementComponent.h" 
+#include "GameFramework/CharacterMovementComponent.h"
 #include "EnhancedInputComponent.h" 
-#include "EnhancedInputSubsystems.h"
+#include "Animation/AnimInstance.h"
 
 ATMCharacter_Warrior::ATMCharacter_Warrior()
 {
-	
 	StatComp = CreateDefaultSubobject<UTMStatComponent>(TEXT("StatComp"));
 	if (StatComp)
 	{
@@ -16,8 +15,6 @@ ATMCharacter_Warrior::ATMCharacter_Warrior()
 		StatComp->CriticalHitChance = 0.05f;
 		StatComp->MovementSpeed = 550.0f;
 	}
-
-	
 	GetCharacterMovement()->MaxWalkSpeed = 550.0f;
 }
 
@@ -28,29 +25,81 @@ void ATMCharacter_Warrior::BeginPlay()
 
 void ATMCharacter_Warrior::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
-	
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
-		
+		// Q, W, E, R 바인딩
 		if (SkillQAction)
-		{
 			EnhancedInputComponent->BindAction(SkillQAction, ETriggerEvent::Started, this, &ATMCharacter_Warrior::InputSkillQ);
+
+		if (SkillWAction)
+			EnhancedInputComponent->BindAction(SkillWAction, ETriggerEvent::Started, this, &ATMCharacter_Warrior::InputSkillW);
+
+		if (SkillEAction)
+			EnhancedInputComponent->BindAction(SkillEAction, ETriggerEvent::Started, this, &ATMCharacter_Warrior::InputSkillE);
+
+		if (SkillRAction)
+			EnhancedInputComponent->BindAction(SkillRAction, ETriggerEvent::Started, this, &ATMCharacter_Warrior::InputSkillR);
+	}
+}
+
+/* ---------------------------------------------------------
+ * 스킬 실제 구현부
+ * --------------------------------------------------------- */
+void ATMCharacter_Warrior::InputSkillQ(const FInputActionValue& Value)
+{
+	GetCharacterMovement()->StopMovementImmediately();
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("[Warrior] Press Q!"));
+	UE_LOG(LogTemp, Warning, TEXT("PressQ"));
+	
+	if (SkillQMontage)
+	{
+		// 2. 캐릭터 메시에서 애니메이션을 관리하는 인스턴스를 가져옴
+		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+		if (AnimInstance)
+		{
+			// 3. 몽타주 재생!
+			AnimInstance->Montage_Play(SkillQMontage);
 		}
 	}
 }
 
-void ATMCharacter_Warrior::InputSkillQ(const FInputActionValue& Value)
+void ATMCharacter_Warrior::InputSkillW(const FInputActionValue& Value)
 {
-	// 1. 시전을 위해 즉시 이동 멈춤
 	GetCharacterMovement()->StopMovementImmediately();
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Orange, TEXT("[Warrior] Press W"));
+	UE_LOG(LogTemp, Warning, TEXT("Press W"));
 
-	// 2. 작동 확인용 로그
-	if (GEngine)
+	if (SkillWMontage)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("[Warrior] pressQ !!"));
+		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+		if (AnimInstance) AnimInstance->Montage_Play(SkillWMontage);
 	}
+}
 
-	//확인 후 애니메이션 몽타주 재생 및 충돌 판정 구현
+void ATMCharacter_Warrior::InputSkillE(const FInputActionValue& Value)
+{
+	GetCharacterMovement()->StopMovementImmediately();
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Purple, TEXT("[Warrior] Press E!"));
+	UE_LOG(LogTemp, Warning, TEXT("Press E"));
+
+	if (SkillEMontage)
+	{
+		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+		if (AnimInstance) AnimInstance->Montage_Play(SkillEMontage);
+	}
+}
+
+void ATMCharacter_Warrior::InputSkillR(const FInputActionValue& Value)
+{
+	GetCharacterMovement()->StopMovementImmediately();
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("[Warrior] Press R!"));
+	UE_LOG(LogTemp, Warning, TEXT("Press R"));
+
+	if (SkillRMontage)
+	{
+		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+		if (AnimInstance) AnimInstance->Montage_Play(SkillRMontage);
+	}
 }
