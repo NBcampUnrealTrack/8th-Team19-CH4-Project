@@ -28,6 +28,8 @@ private:
 	void InputMove(const FInputActionValue& inValue);
 
 	void InputSpace(const FInputActionValue& inValue);
+
+	void InputAttack(const FInputActionValue& inValue);
 protected:
 	void MoveToDestination(FVector destination);
 
