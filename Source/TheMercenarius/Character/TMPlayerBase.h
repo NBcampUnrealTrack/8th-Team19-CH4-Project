@@ -9,6 +9,7 @@
 class USpringArmComponent;
 class UCameraComponent;
 class UAnimMontage;//에니메이션 추가
+class ATMWeaponBase;
 
 UCLASS()
 class THEMERCENARIUS_API ATMPlayerBase : public ACharacter
@@ -28,6 +29,18 @@ public:
 	void StartDash();
 
 	void StopDash();
+
+	void Attack();
+
+	ATMWeaponBase* GetCurrentWeapon() const
+	{
+		return CurrentWeapon;
+	}
+
+protected:
+
+	virtual void BeginPlay() override;
+
 private:
 	UPROPERTY(EditDefaultsOnly, Category = "PlayerComponent")
 	TObjectPtr<USpringArmComponent>springArmComponent;
@@ -49,6 +62,15 @@ private:
 	bool bIsMovingToTarget;
 
 	bool bIsDashToTarget;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Combat")
+	TSubclassOf<ATMWeaponBase> WeaponClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Combat")
+	UAnimMontage* AttackMontage;
+
+	UPROPERTY()
+	ATMWeaponBase* CurrentWeapon;
 protected:
 	UPROPERTY(EditAnywhere, Category = "Movement")
 	float dashRange;

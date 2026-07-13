@@ -27,6 +27,7 @@ void ATMPlayerController::SetupInputComponent()
 	{
 		enhancedInputComponent->BindAction(playerInputConfig->move, ETriggerEvent::Triggered, this, &ThisClass::InputMove);
 		enhancedInputComponent->BindAction(playerInputConfig->space, ETriggerEvent::Started, this, &ThisClass::InputSpace);
+		enhancedInputComponent->BindAction(playerInputConfig->attack, ETriggerEvent::Started, this, &ThisClass::InputAttack);
 	}
 }
 
@@ -63,5 +64,14 @@ void ATMPlayerController::MoveToDash(FVector destination)
 	if (IsValid(playerCharacter) == true)
 	{
 		playerCharacter->DashToTarget(destination);
+	}
+}
+
+void ATMPlayerController::InputAttack(const FInputActionValue& inValue)
+{
+	ATMPlayerBase* playerCharacter = Cast<ATMPlayerBase>(GetPawn());
+	if (playerCharacter)
+	{
+		playerCharacter->Attack();
 	}
 }

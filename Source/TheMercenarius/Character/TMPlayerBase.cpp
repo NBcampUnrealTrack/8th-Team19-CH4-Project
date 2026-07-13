@@ -8,6 +8,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Animation/AnimInstance.h"
+#include "Weapon/TMWeaponBase.h"
 
 // Sets default values
 ATMPlayerBase::ATMPlayerBase() : bIsMovingToTarget(false), bIsDashToTarget(false), arriveToIerance(5.f), dashRange(500.f)
@@ -47,6 +48,24 @@ ATMPlayerBase::ATMPlayerBase() : bIsMovingToTarget(false), bIsDashToTarget(false
 	GetCharacterMovement()->MaxWalkSpeed = 350.f;
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->RotationRate = FRotator(0.f, 640.f, 0.f);
+}
+
+void ATMPlayerBase::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (WeaponClass)
+	{
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.Owner = this;
+		SpawnParams.Instigator = this;
+
+		CurrentWeapon = GetWorld()->SpawnActor<ATMWeaponBase>(WeaponClass, SpawnParams);
+		if (CurrentWeapon)
+		{
+			CurrentWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("SocketName"));
+		}
+	}
 }
 
 void ATMPlayerBase::Tick(float DeltaTime)
@@ -117,7 +136,7 @@ void ATMPlayerBase::DashToTarget(const FVector& newTarget)
 	if (DashMontage)
 	{
 		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-		if (AnimInstance)
+		if (AnimInstance && AnimInstance -> Montage_IsPlaying(DashMontage) == false)
 		{
 			AnimInstance->Montage_Play(DashMontage);
 		}
@@ -134,4 +153,16 @@ void ATMPlayerBase::StopDash()
 	bIsMovingToTarget = false;
 	GetCharacterMovement()->MaxWalkSpeed = 350.f;
 	GetCharacterMovement()->StopMovementImmediately();
+}
+
+void ATMPlayerBase::Attack()
+{
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance && AttackMontage)
+	{
+		if (AnimInstance->Montage_IsPlaying(AttackMontage) == false)
+		{
+			PlayAnimMontage(AttackMontage);
+		}
+	}
 }
