@@ -17,12 +17,48 @@ class THEMERCENARIUS_API ATMCharacter_Warrior : public ATMPlayerBase
 public:
 	ATMCharacter_Warrior();
 
+	// 멀티플레이 네트워크 변수 동기화를 위한 필수 오버라이드 함수
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-	
+
+	// 애님 노티파이(블루프린트)가 도끼를 찍을 때 호출할 함수
 	UFUNCTION(BlueprintCallable, Category = "Skill")
 	void ExecuteSkillQImpact();
+
+	/* ---------------------------------------------------------
+	 * 멀티플레이용 RPC 네트워크 함수 설정 
+	 * --------------------------------------------------------- */
+
+	 // 클라이언트가 서버에게 스킬 쓸게요 요청하는 함수
+	UFUNCTION(Server, Reliable)
+	void Server_InputSkillQ();
+	
+	UFUNCTION(Server, Reliable)
+	void Server_InputSkillW();
+
+	UFUNCTION(Server, Reliable)
+	void Server_InputSkillE();
+
+	UFUNCTION(Server, Reliable)
+	void Server_InputSkillR();
+	//여기까지 요청하는 함수
+
+
+	// 서버가 모든 클라이언트 화면에 애니메이션 재생을 지시하는 방송 함수
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlaySkillQMontage();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlaySkillWMontage();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlaySkillEMontage();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlaySkillRMontage();
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerComponent", meta = (AllowPrivateAccess = "true"))
@@ -43,6 +79,9 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UInputAction> SkillRAction;
 
+	/* ---------------------------------------------------------
+	 * 애니메이션 몽타주
+	 * --------------------------------------------------------- */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UAnimMontage> SkillQMontage;
 
@@ -55,26 +94,29 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UAnimMontage> SkillRMontage;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Q", meta = (AllowPrivateAccess = "true"))
-	float SkillQRadius; // 감지할 구체 반지름 (기본값 추천: 300.f)
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Q", meta = (AllowPrivateAccess = "true"))
-	float SkillQDamage; // 대지가르기 피해량
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Q", meta = (AllowPrivateAccess = "true"))
-	float SkillQSlowModifier; // 감속할 속도 비율 (예: 0.4f면 속도 40% 감소)
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Q", meta = (AllowPrivateAccess = "true"))
-	float SkillQSlowDuration; // 슬로우 지속 시간
-
- 
 	/* ---------------------------------------------------------
-	 * 스킬 실행 함수
+	 * Q 스킬 스펙 데이터
+	 * --------------------------------------------------------- */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Q", meta = (AllowPrivateAccess = "true"))
+	float SkillQRadius;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Q", meta = (AllowPrivateAccess = "true"))
+	float SkillQDamage;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Q", meta = (AllowPrivateAccess = "true"))
+	float SkillQSlowModifier;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Q", meta = (AllowPrivateAccess = "true"))
+	float SkillQSlowDuration;
+
+	/* ---------------------------------------------------------
+	 * 입력 처리 및 내부 로직 함수
 	 * --------------------------------------------------------- */
 	void InputSkillQ(const FInputActionValue& Value);
 	void InputSkillW(const FInputActionValue& Value);
 	void InputSkillE(const FInputActionValue& Value);
 	void InputSkillR(const FInputActionValue& Value);
-	// 실제 충돌 판정을 처리하는 내부 로직 함수
+
+	// 실제 충돌 판정을 처리하는 내부 로직 함수 (오직 서버에서만 실행되도록 보호할 예정)
 	void ProcessSphereOverlap();
-}; 
+};

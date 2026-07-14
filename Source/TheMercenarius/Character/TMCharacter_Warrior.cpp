@@ -1,11 +1,13 @@
-#include "TMCharacter_Warrior.h"
+ï»¿#include "TMCharacter_Warrior.h"
 #include "Game/TMStatComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "EnhancedInputComponent.h" 
 #include "Animation/AnimInstance.h"
-#include "Engine/OverlapResult.h" // ¿À¹ö·¦ °á°ú¸¦ ´ã´Â Çì´õ ÇÊ¼ö!
+#include "Engine/OverlapResult.h" 
 #include "Engine/World.h"
-#include "DrawDebugHelpers.h" // µğ¹ö±× ±¸Ã¼ ½Ã°¢È­¿ë Çì´õ
+#include "DrawDebugHelpers.h" 
+#include "Net/UnrealNetwork.h" 
+#include "Kismet/GameplayStatics.h"
 
 ATMCharacter_Warrior::ATMCharacter_Warrior()
 {
@@ -20,10 +22,17 @@ ATMCharacter_Warrior::ATMCharacter_Warrior()
 
 		SkillQRadius = 300.0f;
 		SkillQDamage = 50.0f;
-		SkillQSlowModifier = 0.4f; // 40% ´À·ÁÁü
-		SkillQSlowDuration = 3.0f; // 3ÃÊ Áö¼Ó
+		SkillQSlowModifier = 0.4f;
+		SkillQSlowDuration = 3.0f;
 	}
 	GetCharacterMovement()->MaxWalkSpeed = 550.0f;
+
+	bReplicates = true;
+}
+
+void ATMCharacter_Warrior::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 }
 
 void ATMCharacter_Warrior::BeginPlay()
@@ -37,7 +46,6 @@ void ATMCharacter_Warrior::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
-		// Q, W, E, R ¹ÙÀÎµù
 		if (SkillQAction)
 			EnhancedInputComponent->BindAction(SkillQAction, ETriggerEvent::Started, this, &ATMCharacter_Warrior::InputSkillQ);
 
@@ -53,32 +61,50 @@ void ATMCharacter_Warrior::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 }
 
 /* ---------------------------------------------------------
- * ½ºÅ³ ½ÇÁ¦ ±¸ÇöºÎ
+ * ìŠ¤í‚¬ ì‹¤ì œ êµ¬í˜„ë¶€ (ë©€í‹°í”Œë ˆì´ ì ìš©)
  * --------------------------------------------------------- */
 void ATMCharacter_Warrior::InputSkillQ(const FInputActionValue& Value)
 {
+	Server_InputSkillQ();
+}
+
+void ATMCharacter_Warrior::Server_InputSkillQ_Implementation()
+{
+	Multicast_PlaySkillQMontage();
+}
+
+void ATMCharacter_Warrior::Multicast_PlaySkillQMontage_Implementation()
+{
 	GetCharacterMovement()->StopMovementImmediately();
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("[Warrior] Press Q!"));
-	UE_LOG(LogTemp, Warning, TEXT("PressQ"));
-	
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("[Warrior] Multi Q Active!"));
+
 	if (SkillQMontage)
 	{
-		// 2. Ä³¸¯ÅÍ ¸Ş½Ã¿¡¼­ ¾Ö´Ï¸ŞÀÌ¼ÇÀ» °ü¸®ÇÏ´Â ÀÎ½ºÅÏ½º¸¦ °¡Á®¿È
 		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 		if (AnimInstance)
 		{
-			// 3. ¸ùÅ¸ÁÖ Àç»ı!
 			AnimInstance->Montage_Play(SkillQMontage);
 		}
 	}
-	
 }
 
+// ---------------------------------------------------------
+// W ìŠ¤í‚¬ (ë¶„ë…¸ì˜ í•¨ì„± ë“±)
+// ---------------------------------------------------------
 void ATMCharacter_Warrior::InputSkillW(const FInputActionValue& Value)
 {
+	Server_InputSkillW();
+}
+
+void ATMCharacter_Warrior::Server_InputSkillW_Implementation()
+{
+	Multicast_PlaySkillWMontage();
+}
+
+void ATMCharacter_Warrior::Multicast_PlaySkillWMontage_Implementation()
+{
 	GetCharacterMovement()->StopMovementImmediately();
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Orange, TEXT("[Warrior] Press W"));
-	UE_LOG(LogTemp, Warning, TEXT("Press W"));
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Orange, TEXT("[Warrior] Multi W Active!"));
 
 	if (SkillWMontage)
 	{
@@ -87,11 +113,23 @@ void ATMCharacter_Warrior::InputSkillW(const FInputActionValue& Value)
 	}
 }
 
+// ---------------------------------------------------------
+// E ìŠ¤í‚¬ (ì°¨ì§€ ìŠ¤íŠ¸ë¼ì´í¬ ë“±)
+// ---------------------------------------------------------
 void ATMCharacter_Warrior::InputSkillE(const FInputActionValue& Value)
 {
+	Server_InputSkillE();
+}
+
+void ATMCharacter_Warrior::Server_InputSkillE_Implementation()
+{
+	Multicast_PlaySkillEMontage();
+}
+
+void ATMCharacter_Warrior::Multicast_PlaySkillEMontage_Implementation()
+{
 	GetCharacterMovement()->StopMovementImmediately();
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Purple, TEXT("[Warrior] Press E!"));
-	UE_LOG(LogTemp, Warning, TEXT("Press E"));
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Purple, TEXT("[Warrior] Multi E Active!"));
 
 	if (SkillEMontage)
 	{
@@ -100,11 +138,23 @@ void ATMCharacter_Warrior::InputSkillE(const FInputActionValue& Value)
 	}
 }
 
+// ---------------------------------------------------------
+// R ìŠ¤í‚¬ (ê¶ê·¹ê¸°)
+// ---------------------------------------------------------
 void ATMCharacter_Warrior::InputSkillR(const FInputActionValue& Value)
 {
+	Server_InputSkillR();
+}
+
+void ATMCharacter_Warrior::Server_InputSkillR_Implementation()
+{
+	Multicast_PlaySkillRMontage();
+}
+
+void ATMCharacter_Warrior::Multicast_PlaySkillRMontage_Implementation()
+{
 	GetCharacterMovement()->StopMovementImmediately();
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("[Warrior] Press R!"));
-	UE_LOG(LogTemp, Warning, TEXT("Press R"));
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("[Warrior] Multi R Active!"));
 
 	if (SkillRMontage)
 	{
@@ -112,23 +162,25 @@ void ATMCharacter_Warrior::InputSkillR(const FInputActionValue& Value)
 		if (AnimInstance) AnimInstance->Montage_Play(SkillRMontage);
 	}
 }
+
 // ---------------------------------------------------------
-// Q ½ºÅ³ ¹üÀ§ ÆÇÁ¤ ·ÎÁ÷
+// Q ìŠ¤í‚¬ ë²”ìœ„ íŒì • ë¡œì§ (ì• ë‹˜ ë…¸í‹°íŒŒì´ì—ì„œ í˜¸ì¶œë¨)
 // ---------------------------------------------------------
 void ATMCharacter_Warrior::ExecuteSkillQImpact()
 {
-	ProcessSphereOverlap();
+	if (HasAuthority())
+	{
+		ProcessSphereOverlap();
+	}
 }
 
 void ATMCharacter_Warrior::ProcessSphereOverlap()
 {
-	// ³» Ä³¸¯ÅÍ ¾ÕÂÊÀ¸·Î 100¸¸Å­ ¶³¾îÁø °÷À» Å¸°İ Áß½ÉÁ¡À¸·Î Àâ½À´Ï´Ù.
 	FVector CenterLocation = GetActorLocation() + GetActorForwardVector() * 100.f;
-	FCollisionQueryParams Params(NAME_None, false, this); // ³ª ÀÚ½ÅÀº Å¸°İ¿¡¼­ Á¦¿Ü
+	FCollisionQueryParams Params(NAME_None, false, this);
 
 	TArray<FOverlapResult> OverlapResults;
 
-	// ¹İ°æ(SkillQRadius) ³»¿¡ ÀÖ´Â Æù(¸ó½ºÅÍ)µéÀ» ½Ï ´Ù °¨ÁöÇÕ´Ï´Ù.
 	bool bHasOverlap = GetWorld()->OverlapMultiByChannel(
 		OverlapResults,
 		CenterLocation,
@@ -138,7 +190,6 @@ void ATMCharacter_Warrior::ProcessSphereOverlap()
 		Params
 	);
 
-	// ´«À¸·Î È®ÀÎÇÏ±â À§ÇØ 3ÃÊ µ¿¾È »¡°£»ö Ä¿´Ù¶õ ±¸Ã¼¸¦ ±×·ÁÁİ´Ï´Ù!
 	DrawDebugSphere(GetWorld(), CenterLocation, SkillQRadius, 16, FColor::Red, false, 3.0f);
 
 	if (bHasOverlap == true)
@@ -148,9 +199,16 @@ void ATMCharacter_Warrior::ProcessSphereOverlap()
 			AActor* OverlappedActor = Result.GetActor();
 			if (IsValid(OverlappedActor) == true && OverlappedActor != this)
 			{
-				// °¨ÁöµÈ ¸ó½ºÅÍÀÇ ÀÌ¸§À» È­¸é¿¡ ÃÊ·Ï»öÀ¸·Î ¶ç¿öÁİ´Ï´Ù.
 				GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Green,
-					FString::Printf(TEXT("[Hit] %s"), *OverlappedActor->GetName()));
+					FString::Printf(TEXT("[Hit - Server] %s to %f hit damage!"), *OverlappedActor->GetName(), SkillQDamage));
+
+				UGameplayStatics::ApplyDamage(
+					OverlappedActor,
+					SkillQDamage,
+					GetController(),
+					this,
+					UDamageType::StaticClass()
+				);
 			}
 		}
 	}
