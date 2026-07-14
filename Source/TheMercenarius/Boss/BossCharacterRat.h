@@ -6,6 +6,11 @@
 #include "GameFramework/Character.h"
 #include "BossCharacterRat.generated.h"
 
+class UBoxComponent;
+class USphereComponent;
+class UStaticMeshComponent;
+class USceneComponent;
+
 UCLASS()
 class THEMERCENARIUS_API ABossCharacterRat : public ACharacter
 {
@@ -17,11 +22,11 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
-
 public:
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	virtual float TakeDamage(
 		float DamageAmount,
 		struct FDamageEvent const& DamageEvent,
@@ -30,12 +35,14 @@ public:
 	) override;
 
 protected:
+	// Stats
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Stats")
 	float MaxHP = 800.0f;
 
 	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Stats")
 	float CurrentHP;
 
+	// AI
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|AI")
 	float ChaseAcceptanceRadius = 220.0f;
 
@@ -48,11 +55,25 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|AI")
 	float AttackDecisionInterval = 0.5f;
 
-	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Attack")
+	UPROPERTY()
+	AActor* TargetPlayer = nullptr;
+
+	FTimerHandle TargetUpdateTimerHandle;
+	FTimerHandle MoveTimerHandle;
+	FTimerHandle AttackDecisionTimerHandle;
+	FTimerHandle AttackEndTimerHandle;
+
+	void UpdateTarget();
+	void MoveToTarget();
+	void UpdateBossAI();
+
+	// State
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category = "Boss|State")
 	bool bIsAttacking = false;
 
+	// Scratch Attack
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Scratch")
-	float ScratchRange = 250.0f;
+	float ScratchRange = 600.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Scratch")
 	float ScratchWarningTime = 1.0f;
@@ -70,11 +91,28 @@ protected:
 	bool bCanScratch = true;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Scratch")
-	class UBoxComponent* ScratchHitBox;
+	UBoxComponent* ScratchHitBox;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Scratch")
-	class UStaticMeshComponent* ScratchWarningMesh;
+	UStaticMeshComponent* ScratchWarningMesh;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Scratch")
+	float ScratchStartHalfAngle = 70.0f;
+
+	FTimerHandle ScratchDamageTimerHandle;
+	FTimerHandle ScratchCooldownTimerHandle;
+
+	void StartScratchAttack();
+	void ApplyScratchDamage();
+	void FinishScratchAttack();
+	void ResetScratchCooldown();
+	void RotateToTarget();
+	bool IsTargetInScratchAngle() const;
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_SetScratchWarningVisible(bool bVisible);
+
+	// Dash Attack
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Dash")
 	float DashWarningTime = 3.0f;
 
@@ -83,6 +121,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Dash")
 	float DashCooldown = 30.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Dash")
+	float InitialDashCooldown = 30.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Dash")
 	float DashDistance = 1200.0f;
@@ -99,35 +140,58 @@ protected:
 	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Dash")
 	bool bCanDash = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Dash")
-	float InitialDashCooldown = 30.0f;
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Dash")
+	bool bIsDashing = false;
+
+	UPROPERTY()
+	AActor* DashTarget = nullptr;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Dash")
-	class UStaticMeshComponent* DashWarningMesh;
+	UStaticMeshComponent* DashWarningMesh;
 
-	UPROPERTY()
-	AActor* TargetPlayer;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Dash")
+	USceneComponent* DashWarningPivot;
 
-	UPROPERTY()
-	AActor* DashTarget;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Dash")
+	float DashWarningForwardOffset = 350.0f;
 
 	FVector DashDirection;
+	FVector DashStartLocation;
+	FVector DashEndLocation;
+	float DashElapsedTime = 0.0f;
 
-	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Phase")
+	FTimerHandle DashExecuteTimerHandle;
+	FTimerHandle DashCooldownTimerHandle;
+
+	void UpdateDash(float DeltaTime);
+	void UpdateDashTarget();
+	void StartDashAttack();
+	void ExecuteDashAttack();
+	void ApplyDashDamage();
+	void FinishDashAttack();
+	void ResetDashCooldown();
+	void StartDashCooldown();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_SetDashWarningVisible(bool bVisible);
+
+	// Phase 2
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Phase")
+	float Phase2Threshold = 0.5f;
+
+	UPROPERTY(ReplicatedUsing = OnRep_IsPhase2, VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Phase")
 	bool bIsPhase2 = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Debug")
+	bool bStartWithPhase2 = false;
 
 	UFUNCTION()
 	void OnRep_IsPhase2();
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Aura")
-	class USphereComponent* DamageAuraSphere;
+	void CheckPhase2();
+	void EnterPhase2();
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Aura")
-	class UStaticMeshComponent* DamageAuraWarningMesh;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Aura")
-	float Phase2Threshold = 0.5f;
-
+	// Phase 2 Aura
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Aura")
 	float AuraRadius = 450.0f;
 
@@ -137,48 +201,16 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Aura")
 	float AuraDamageInterval = 1.0f;
 
-	FTimerHandle AuraDamageTimerHandle;	
-	FTimerHandle TargetUpdateTimerHandle;
-	FTimerHandle MoveTimerHandle;
-	FTimerHandle AttackDecisionTimerHandle;
-	FTimerHandle AttackEndTimerHandle;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Aura")
+	USphereComponent* DamageAuraSphere;
 
-	FTimerHandle ScratchDamageTimerHandle;
-	FTimerHandle ScratchCooldownTimerHandle;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|Aura")
+	UStaticMeshComponent* DamageAuraWarningMesh;
 
-	FTimerHandle DashExecuteTimerHandle;
-	FTimerHandle DashCooldownTimerHandle;
+	FTimerHandle AuraDamageTimerHandle;
 
-	void UpdateTarget();
-	void MoveToTarget();
-	void UpdateBossAI();
-
-	void StartScratchAttack();
-	void ApplyScratchDamage();
-	void FinishScratchAttack();
-	void ResetScratchCooldown();
-
-	void UpdateDashTarget();
-	void StartDashAttack();
-	void ExecuteDashAttack();
-	void ApplyDashDamage();
-	void FinishDashAttack();
-	void ResetDashCooldown();
-	void StartDashCooldown();
-
-	void CheckPhase2();
-	void EnterPhase2();
 	void ApplyAuraDamage();
 
 	UFUNCTION(NetMulticast, Reliable)
-	void Multicast_SetScratchWarningVisible(bool bVisible);
-
-	UFUNCTION(NetMulticast, Reliable)
-	void Multicast_SetDashWarningVisible(bool bVisible);
-
-	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_SetAuraVisible(bool bVisible);
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Debug")
-	bool bStartWithPhase2 = false;
 };

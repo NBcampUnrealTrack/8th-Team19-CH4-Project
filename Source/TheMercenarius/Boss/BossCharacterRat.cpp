@@ -2,14 +2,13 @@
 
 #include "AIController.h"
 #include "Components/BoxComponent.h"
-#include "Components/StaticMeshComponent.h"
 #include "Components/SphereComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Components/SceneComponent.h"
 #include "Engine/OverlapResult.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
-
 
 ABossCharacterRat::ABossCharacterRat()
 {
@@ -33,9 +32,15 @@ ABossCharacterRat::ABossCharacterRat()
 	ScratchWarningMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	ScratchWarningMesh->SetHiddenInGame(true);
 
+	DashWarningPivot = CreateDefaultSubobject<USceneComponent>(TEXT("DashWarningPivot"));
+	DashWarningPivot->SetupAttachment(RootComponent);
+	DashWarningPivot->SetRelativeLocation(FVector(0.0f, 0.0f, -130.0f));
+	DashWarningPivot->SetRelativeRotation(FRotator::ZeroRotator);
+
 	DashWarningMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("DashWarningMesh"));
-	DashWarningMesh->SetupAttachment(RootComponent);
-	DashWarningMesh->SetRelativeLocation(FVector(DashDistance * 0.5f, 0.0f, 5.0f));
+	DashWarningMesh->SetupAttachment(DashWarningPivot);
+	DashWarningMesh->SetRelativeLocation(FVector(DashDistance * 0.5f, 0.0f, 0.0f));
+	DashWarningMesh->SetRelativeRotation(FRotator::ZeroRotator);
 	DashWarningMesh->SetRelativeScale3D(FVector(DashDistance / 100.0f, DashHitWidth / 100.0f, 0.05f));
 	DashWarningMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	DashWarningMesh->SetHiddenInGame(true);
@@ -47,7 +52,7 @@ ABossCharacterRat::ABossCharacterRat()
 
 	DamageAuraWarningMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("DamageAuraWarningMesh"));
 	DamageAuraWarningMesh->SetupAttachment(RootComponent);
-	DamageAuraWarningMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 5.0f));
+	DamageAuraWarningMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 	DamageAuraWarningMesh->SetRelativeScale3D(FVector(AuraRadius / 50.0f, AuraRadius / 50.0f, 1.0f));
 	DamageAuraWarningMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	DamageAuraWarningMesh->SetHiddenInGame(true);
@@ -63,27 +68,13 @@ void ABossCharacterRat::BeginPlay()
 	}
 
 	CurrentHP = MaxHP;
-
-	UE_LOG(LogTemp, Warning, TEXT("StartWithPhase2: %s"),
-		bStartWithPhase2 ? TEXT("true") : TEXT("false")
-	);
-
 	bCanDash = false;
 
-	GetWorldTimerManager().SetTimer(
-		DashCooldownTimerHandle,
-		this,
-		&ABossCharacterRat::ResetDashCooldown,
-		InitialDashCooldown,
-		false
-	);
+	GetWorldTimerManager().SetTimer(DashCooldownTimerHandle, this, &ABossCharacterRat::ResetDashCooldown, InitialDashCooldown, false);
 
 	if (bStartWithPhase2)
 	{
-		CurrentHP = MaxHP * 0.49f;
-
-		UE_LOG(LogTemp, Warning, TEXT("Force Phase2 HP: %f / %f"), CurrentHP, MaxHP);
-
+		CurrentHP = MaxHP * Phase2Threshold - 1.0f;
 		CheckPhase2();
 	}
 
@@ -95,11 +86,36 @@ void ABossCharacterRat::BeginPlay()
 void ABossCharacterRat::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	if (HasAuthority() && bIsDashing)
+	{
+		UpdateDash(DeltaTime);
+	}
 }
 
 void ABossCharacterRat::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
+}
+
+float ABossCharacterRat::TakeDamage(
+	float DamageAmount,
+	FDamageEvent const& DamageEvent,
+	AController* EventInstigator,
+	AActor* DamageCauser
+)
+{
+	if (!HasAuthority())
+	{
+		return 0.0f;
+	}
+
+	const float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+	CurrentHP = FMath::Clamp(CurrentHP - DamageAmount, 0.0f, MaxHP);
+	CheckPhase2();
+
+	return ActualDamage;
 }
 
 void ABossCharacterRat::UpdateTarget()
@@ -127,6 +143,7 @@ void ABossCharacterRat::UpdateTarget()
 		}
 
 		const float DistanceSq = FVector::DistSquared(GetActorLocation(), PlayerPawn->GetActorLocation());
+
 		if (DistanceSq < ClosestDistanceSq)
 		{
 			ClosestDistanceSq = DistanceSq;
@@ -158,14 +175,8 @@ void ABossCharacterRat::MoveToTarget()
 
 void ABossCharacterRat::UpdateBossAI()
 {
-	if (!HasAuthority() || bIsAttacking)
+	if (!HasAuthority() || bIsAttacking || bIsDashing)
 	{
-		return;
-	}
-
-	if (bCanDash)
-	{
-		StartDashAttack();
 		return;
 	}
 
@@ -177,13 +188,43 @@ void ABossCharacterRat::UpdateBossAI()
 
 	const float Distance = FVector::Dist(GetActorLocation(), TargetPlayer->GetActorLocation());
 
-	if (Distance <= ScratchRange && bCanScratch)
+	if (bCanScratch && Distance <= ScratchRange)
 	{
-		StartScratchAttack();
+		if (IsTargetInScratchAngle())
+		{
+			StartScratchAttack();
+			return;
+		}
+
+		RotateToTarget();
+		return;
+	}
+
+	if (bCanDash)
+	{
+		StartDashAttack();
 		return;
 	}
 
 	MoveToTarget();
+}
+
+void ABossCharacterRat::RotateToTarget()
+{
+	if (!TargetPlayer)
+	{
+		return;
+	}
+
+	FVector Direction = TargetPlayer->GetActorLocation() - GetActorLocation();
+	Direction.Z = 0.0f;
+
+	if (Direction.IsNearlyZero())
+	{
+		return;
+	}
+
+	SetActorRotation(Direction.Rotation());
 }
 
 void ABossCharacterRat::StartScratchAttack()
@@ -201,17 +242,11 @@ void ABossCharacterRat::StartScratchAttack()
 		AIController->StopMovement();
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("Boss Rat: Scratch Warning"));
+	RotateToTarget();
 
 	Multicast_SetScratchWarningVisible(true);
 
-	GetWorldTimerManager().SetTimer(
-		ScratchDamageTimerHandle,
-		this,
-		&ABossCharacterRat::ApplyScratchDamage,
-		ScratchWarningTime,
-		false
-	);
+	GetWorldTimerManager().SetTimer(ScratchDamageTimerHandle, this, &ABossCharacterRat::ApplyScratchDamage, ScratchWarningTime, false);
 }
 
 void ABossCharacterRat::ApplyScratchDamage()
@@ -220,8 +255,6 @@ void ABossCharacterRat::ApplyScratchDamage()
 	{
 		return;
 	}
-
-	UE_LOG(LogTemp, Warning, TEXT("Boss Rat: Scratch Damage"));
 
 	ScratchHitBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	ScratchHitBox->UpdateOverlaps();
@@ -242,13 +275,7 @@ void ABossCharacterRat::ApplyScratchDamage()
 	ScratchHitBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	Multicast_SetScratchWarningVisible(false);
 
-	GetWorldTimerManager().SetTimer(
-		AttackEndTimerHandle,
-		this,
-		&ABossCharacterRat::FinishScratchAttack,
-		ScratchAfterDelay,
-		false
-	);
+	GetWorldTimerManager().SetTimer(AttackEndTimerHandle, this, &ABossCharacterRat::FinishScratchAttack, ScratchAfterDelay, false);
 }
 
 void ABossCharacterRat::FinishScratchAttack()
@@ -260,13 +287,7 @@ void ABossCharacterRat::FinishScratchAttack()
 
 	bIsAttacking = false;
 
-	GetWorldTimerManager().SetTimer(
-		ScratchCooldownTimerHandle,
-		this,
-		&ABossCharacterRat::ResetScratchCooldown,
-		ScratchCooldown,
-		false
-	);
+	GetWorldTimerManager().SetTimer(ScratchCooldownTimerHandle, this, &ABossCharacterRat::ResetScratchCooldown, ScratchCooldown, false);
 }
 
 void ABossCharacterRat::ResetScratchCooldown()
@@ -277,6 +298,33 @@ void ABossCharacterRat::ResetScratchCooldown()
 	}
 
 	bCanScratch = true;
+}
+
+bool ABossCharacterRat::IsTargetInScratchAngle() const
+{
+	if (!TargetPlayer)
+	{
+		return false;
+	}
+
+	FVector ToTarget = TargetPlayer->GetActorLocation() - GetActorLocation();
+	ToTarget.Z = 0.0f;
+
+	if (ToTarget.IsNearlyZero())
+	{
+		return false;
+	}
+
+	const FVector DirectionToTarget = ToTarget.GetSafeNormal();
+
+	FVector Forward = GetActorForwardVector();
+	Forward.Z = 0.0f;
+	Forward = Forward.GetSafeNormal();
+
+	const float Dot = FMath::Clamp(FVector::DotProduct(Forward, DirectionToTarget), -1.0f, 1.0f);
+	const float Angle = FMath::RadiansToDegrees(FMath::Acos(Dot));
+
+	return Angle <= ScratchStartHalfAngle;
 }
 
 void ABossCharacterRat::UpdateDashTarget()
@@ -304,6 +352,7 @@ void ABossCharacterRat::UpdateDashTarget()
 		}
 
 		const float DistanceSq = FVector::DistSquared(GetActorLocation(), PlayerPawn->GetActorLocation());
+
 		if (DistanceSq > FarthestDistanceSq)
 		{
 			FarthestDistanceSq = DistanceSq;
@@ -346,23 +395,33 @@ void ABossCharacterRat::StartDashAttack()
 
 	SetActorRotation(DashDirection.Rotation());
 
-	if (DashWarningMesh)
+	if (DashWarningPivot)
 	{
-		DashWarningMesh->SetRelativeLocation(FVector(DashDistance * 0.5f, 0.0f, 5.0f));
-		DashWarningMesh->SetRelativeScale3D(FVector(DashDistance / 100.0f, DashHitWidth / 100.0f, 0.05f));
+		DashWarningPivot->SetRelativeLocation(FVector(0.0f, 0.0f, -220.0f));
+		DashWarningPivot->SetRelativeRotation(FRotator::ZeroRotator);
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("Boss Rat: Dash Warning"));
+	if (DashWarningMesh)
+	{
+		const FVector BossLocation = GetActorLocation();
+		const FVector WarningLocation =
+			BossLocation + DashDirection * (DashWarningForwardOffset + DashDistance * 0.5f);
+
+		DashWarningMesh->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+
+		DashWarningMesh->SetWorldLocation(FVector(
+			WarningLocation.X,
+			WarningLocation.Y,
+			5.0f
+		));
+
+		DashWarningMesh->SetWorldRotation(DashDirection.Rotation());
+		DashWarningMesh->SetWorldScale3D(FVector(DashDistance / 100.0f, DashHitWidth / 100.0f, 0.05f));
+	}
 
 	Multicast_SetDashWarningVisible(true);
 
-	GetWorldTimerManager().SetTimer(
-		DashExecuteTimerHandle,
-		this,
-		&ABossCharacterRat::ExecuteDashAttack,
-		DashWarningTime,
-		false
-	);
+	GetWorldTimerManager().SetTimer(DashExecuteTimerHandle, this, &ABossCharacterRat::ExecuteDashAttack, DashWarningTime, false);
 }
 
 void ABossCharacterRat::ExecuteDashAttack()
@@ -372,22 +431,14 @@ void ABossCharacterRat::ExecuteDashAttack()
 		return;
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("Boss Rat: Dash Execute"));
-
 	Multicast_SetDashWarningVisible(false);
 
 	ApplyDashDamage();
 
-	const float DashSpeed = DashDistance / DashDuration;
-	LaunchCharacter(DashDirection * DashSpeed, true, false);
-
-	GetWorldTimerManager().SetTimer(
-		AttackEndTimerHandle,
-		this,
-		&ABossCharacterRat::FinishDashAttack,
-		DashDuration,
-		false
-	);
+	DashStartLocation = GetActorLocation();
+	DashEndLocation = DashStartLocation + DashDirection * DashDistance;
+	DashElapsedTime = 0.0f;
+	bIsDashing = true;
 }
 
 void ABossCharacterRat::ApplyDashDamage()
@@ -440,17 +491,9 @@ void ABossCharacterRat::FinishDashAttack()
 		return;
 	}
 
-	LaunchCharacter(FVector::ZeroVector, true, true);
-
 	bIsAttacking = false;
 
-	GetWorldTimerManager().SetTimer(
-		AttackEndTimerHandle,
-		this,
-		&ABossCharacterRat::StartDashCooldown,
-		DashAfterDelay,
-		false
-	);
+	GetWorldTimerManager().SetTimer(AttackEndTimerHandle, this, &ABossCharacterRat::StartDashCooldown, DashAfterDelay, false);
 }
 
 void ABossCharacterRat::StartDashCooldown()
@@ -460,13 +503,7 @@ void ABossCharacterRat::StartDashCooldown()
 		return;
 	}
 
-	GetWorldTimerManager().SetTimer(
-		DashCooldownTimerHandle,
-		this,
-		&ABossCharacterRat::ResetDashCooldown,
-		DashCooldown,
-		false
-	);
+	GetWorldTimerManager().SetTimer(DashCooldownTimerHandle, this, &ABossCharacterRat::ResetDashCooldown, DashCooldown, false);
 }
 
 void ABossCharacterRat::ResetDashCooldown()
@@ -479,54 +516,32 @@ void ABossCharacterRat::ResetDashCooldown()
 	bCanDash = true;
 }
 
-void ABossCharacterRat::Multicast_SetScratchWarningVisible_Implementation(bool bVisible)
-{
-	if (ScratchWarningMesh)
-	{
-		ScratchWarningMesh->SetHiddenInGame(!bVisible);
-	}
-}
-
-void ABossCharacterRat::Multicast_SetDashWarningVisible_Implementation(bool bVisible)
-{
-	if (DashWarningMesh)
-	{
-		DashWarningMesh->SetHiddenInGame(!bVisible);
-	}
-}
-
-void ABossCharacterRat::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-	DOREPLIFETIME(ABossCharacterRat, CurrentHP);
-	DOREPLIFETIME(ABossCharacterRat, bIsAttacking);
-	DOREPLIFETIME(ABossCharacterRat, bCanScratch);
-	DOREPLIFETIME(ABossCharacterRat, bCanDash);
-	DOREPLIFETIME(ABossCharacterRat, bIsPhase2);
-}
-
-float ABossCharacterRat::TakeDamage(
-	float DamageAmount,
-	FDamageEvent const& DamageEvent,
-	AController* EventInstigator,
-	AActor* DamageCauser
-)
+void ABossCharacterRat::UpdateDash(float DeltaTime)
 {
 	if (!HasAuthority())
 	{
-		return 0.0f;
+		return;
 	}
 
-	const float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+	DashElapsedTime += DeltaTime;
 
-	CurrentHP = FMath::Clamp(CurrentHP - DamageAmount, 0.0f, MaxHP);
+	const float Alpha = FMath::Clamp(DashElapsedTime / DashDuration, 0.0f, 1.0f);
+	const FVector NewLocation = FMath::Lerp(DashStartLocation, DashEndLocation, Alpha);
 
-	UE_LOG(LogTemp, Warning, TEXT("Boss HP: %f / %f"), CurrentHP, MaxHP);
+	SetActorLocation(NewLocation, true);
 
-	CheckPhase2();
+	if (Alpha >= 1.0f)
+	{
+		bIsDashing = false;
 
-	return ActualDamage;
+		GetWorldTimerManager().SetTimer(
+			AttackEndTimerHandle,
+			this,
+			&ABossCharacterRat::FinishDashAttack,
+			DashAfterDelay,
+			false
+		);
+	}
 }
 
 void ABossCharacterRat::CheckPhase2()
@@ -535,8 +550,6 @@ void ABossCharacterRat::CheckPhase2()
 	{
 		return;
 	}
-
-	UE_LOG(LogTemp, Warning, TEXT("Force Phase2 HP: %f / %f"), CurrentHP, MaxHP);
 
 	if (CurrentHP <= MaxHP * Phase2Threshold)
 	{
@@ -553,25 +566,22 @@ void ABossCharacterRat::EnterPhase2()
 
 	bIsPhase2 = true;
 
-	DamageAuraSphere->SetSphereRadius(AuraRadius);
+	if (DamageAuraSphere)
+	{
+		DamageAuraSphere->SetSphereRadius(AuraRadius);
+	}
 
 	OnRep_IsPhase2();
 	ForceNetUpdate();
 
-	GetWorldTimerManager().SetTimer(
-		AuraDamageTimerHandle,
-		this,
-		&ABossCharacterRat::ApplyAuraDamage,
-		AuraDamageInterval,
-		true
-	);
+	GetWorldTimerManager().SetTimer(AuraDamageTimerHandle, this, &ABossCharacterRat::ApplyAuraDamage, AuraDamageInterval, true);
 
 	UE_LOG(LogTemp, Warning, TEXT("Boss Rat: Phase 2 Aura Started"));
 }
 
 void ABossCharacterRat::ApplyAuraDamage()
 {
-	if (!HasAuthority())
+	if (!HasAuthority() || !DamageAuraSphere)
 	{
 		return;
 	}
@@ -589,13 +599,7 @@ void ABossCharacterRat::ApplyAuraDamage()
 			continue;
 		}
 
-		UGameplayStatics::ApplyDamage(
-			Actor,
-			AuraDamage,
-			GetController(),
-			this,
-			nullptr
-		);
+		UGameplayStatics::ApplyDamage(Actor, AuraDamage, GetController(), this, nullptr);
 	}
 
 	DamageAuraSphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -603,15 +607,26 @@ void ABossCharacterRat::ApplyAuraDamage()
 
 void ABossCharacterRat::OnRep_IsPhase2()
 {
-	if (DamageAuraWarningMesh)
-	{
-		DamageAuraWarningMesh->SetHiddenInGame(false);
-		DamageAuraWarningMesh->SetVisibility(true, true);
+	Multicast_SetAuraVisible(bIsPhase2);
+}
 
-		UE_LOG(LogTemp, Warning, TEXT("Aura Mesh forced visible"));
-		UE_LOG(LogTemp, Warning, TEXT("Aura Mesh Asset: %s"),
-			DamageAuraWarningMesh->GetStaticMesh() ? *DamageAuraWarningMesh->GetStaticMesh()->GetName() : TEXT("None")
-		);
+void UpdateDash(float DeltaTime);
+
+void ABossCharacterRat::Multicast_SetScratchWarningVisible_Implementation(bool bVisible)
+{
+	if (ScratchWarningMesh)
+	{
+		ScratchWarningMesh->SetHiddenInGame(!bVisible);
+		ScratchWarningMesh->SetVisibility(bVisible, true);
+	}
+}
+
+void ABossCharacterRat::Multicast_SetDashWarningVisible_Implementation(bool bVisible)
+{
+	if (DashWarningMesh)
+	{
+		DashWarningMesh->SetHiddenInGame(!bVisible);
+		DashWarningMesh->SetVisibility(bVisible, true);
 	}
 }
 
@@ -620,5 +635,18 @@ void ABossCharacterRat::Multicast_SetAuraVisible_Implementation(bool bVisible)
 	if (DamageAuraWarningMesh)
 	{
 		DamageAuraWarningMesh->SetHiddenInGame(!bVisible);
+		DamageAuraWarningMesh->SetVisibility(bVisible, true);
 	}
+}
+
+void ABossCharacterRat::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ABossCharacterRat, CurrentHP);
+	DOREPLIFETIME(ABossCharacterRat, bIsAttacking);
+	DOREPLIFETIME(ABossCharacterRat, bIsDashing);
+	DOREPLIFETIME(ABossCharacterRat, bCanScratch);
+	DOREPLIFETIME(ABossCharacterRat, bCanDash);
+	DOREPLIFETIME(ABossCharacterRat, bIsPhase2);
 }
