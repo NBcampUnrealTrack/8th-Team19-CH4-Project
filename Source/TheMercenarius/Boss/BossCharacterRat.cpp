@@ -105,17 +105,73 @@ float ABossCharacterRat::TakeDamage(
 	AActor* DamageCauser
 )
 {
-	if (!HasAuthority())
+	if (!HasAuthority() || bIsDead)
 	{
 		return 0.0f;
 	}
 
-	const float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+	const float ActualDamage = Super::TakeDamage(
+		DamageAmount,
+		DamageEvent,
+		EventInstigator,
+		DamageCauser
+	);
 
-	CurrentHP = FMath::Clamp(CurrentHP - DamageAmount, 0.0f, MaxHP);
-	CheckPhase2();
+	if (ActualDamage <= 0.0f)
+	{
+		return 0.0f;
+	}
+
+	CurrentHP = FMath::Clamp(
+		CurrentHP - ActualDamage,
+		0.0f,
+		MaxHP
+	);
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("Boss Rat HP: %.1f / %.1f"),
+		CurrentHP,
+		MaxHP
+	);
+
+	if (CurrentHP <= 0.0f)
+	{
+		HandleDeath();
+	}
+	else
+	{
+		CheckPhase2();
+	}
 
 	return ActualDamage;
+}
+
+void ABossCharacterRat::HandleDeath()
+{
+	if (!HasAuthority() || bIsDead)
+	{
+		return;
+	}
+
+	bIsDead = true;
+	bIsAttacking = true;
+
+	SetCanBeDamaged(false);
+	GetWorldTimerManager().ClearAllTimersForObject(this);
+
+	if (AAIController* AIController = Cast<AAIController>(GetController()))
+	{
+		AIController->StopMovement();
+	}
+
+	GetCharacterMovement()->StopMovementImmediately();
+	SetActorEnableCollision(false);
+
+	UE_LOG(LogTemp, Warning, TEXT("Boss Rat Defeated"));
+
+	Destroy();
 }
 
 void ABossCharacterRat::UpdateTarget()

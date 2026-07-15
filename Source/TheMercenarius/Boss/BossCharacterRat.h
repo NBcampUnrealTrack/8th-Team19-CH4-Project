@@ -71,6 +71,11 @@ protected:
 	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category = "Boss|State")
 	bool bIsAttacking = false;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss|State")
+	bool bIsDead = false;
+
+	void HandleDeath();
+
 	// Scratch Attack
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Scratch")
 	float ScratchRange = 600.0f;
@@ -213,4 +218,5 @@ protected:
 
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_SetAuraVisible(bool bVisible);
+
 };
