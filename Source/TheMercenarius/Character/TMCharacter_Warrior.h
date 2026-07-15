@@ -28,6 +28,10 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "Skill")
 	void ExecuteSkillQImpact();
 
+	// 애님 노티파이(블루프린트)가 R스킬 도끼를 휘두를 때 호출할 함수
+	UFUNCTION(BlueprintCallable, Category = "Skill")
+	void ExecuteSkillRImpact();
+
 	/* ---------------------------------------------------------
 	 * 멀티플레이용 RPC 네트워크 함수 설정 
 	 * --------------------------------------------------------- */
@@ -110,6 +114,15 @@ private:
 	float SkillQSlowDuration;
 
 	/* ---------------------------------------------------------
+	 * R 스킬 스펙 데이터 (추가)
+	 * --------------------------------------------------------- */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|R", meta = (AllowPrivateAccess = "true"))
+	float SkillRRadius; // 360도 범위
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|R", meta = (AllowPrivateAccess = "true"))
+	float SkillRDamage; // 타격당 데미지 (연타를 위해 낮게 설정)
+
+	/* ---------------------------------------------------------
 	 * 입력 처리 및 내부 로직 함수
 	 * --------------------------------------------------------- */
 	void InputSkillQ(const FInputActionValue& Value);
@@ -119,4 +132,10 @@ private:
 
 	// 실제 충돌 판정을 처리하는 내부 로직 함수 (오직 서버에서만 실행되도록 보호할 예정)
 	void ProcessSphereOverlap();
+
+	// R 스킬 실제 충돌 판정
+	void ProcessSkillROverlap();
+
+	// 3초 뒤에 몬스터의 속도를 원래대로 돌려놓을 타이머용 함수
+	void ResetTargetSpeed(class ACharacter* TargetCharacter, float OriginalSpeed);
 };
