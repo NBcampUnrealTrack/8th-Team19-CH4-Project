@@ -134,6 +134,86 @@ void ABossCharacterZombie::Tick(float DeltaTime)
 void ABossCharacterZombie::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
+
+}
+
+float ABossCharacterZombie::TakeDamage(
+	float DamageAmount,
+	FDamageEvent const& DamageEvent,
+	AController* EventInstigator,
+	AActor* DamageCauser
+)
+{
+	if (!HasAuthority() || bIsDead)
+	{
+		return 0.0f;
+	}
+
+	const float ActualDamage = Super::TakeDamage(
+		DamageAmount,
+		DamageEvent,
+		EventInstigator,
+		DamageCauser
+	);
+
+	if (ActualDamage <= 0.0f)
+	{
+		return 0.0f;
+	}
+
+	CurrentHP = FMath::Clamp(
+		CurrentHP - ActualDamage,
+		0.0f,
+		MaxHP
+	);
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("Zombie Boss HP: %.1f / %.1f"),
+		CurrentHP,
+		MaxHP
+	);
+
+	if (CurrentHP <= 0.0f)
+	{
+		HandleDeath();
+	}
+	else
+	{
+		CheckPhase2();
+	}
+
+	return ActualDamage;
+}
+
+void ABossCharacterZombie::HandleDeath()
+{
+	if (!HasAuthority() || bIsDead)
+	{
+		return;
+	}
+
+	bIsDead = true;
+	bIsAttacking = true;
+	bIsPhase2PatternRunning = false;
+	bIsDashing = false;
+	bIsLaserAttacking = false;
+
+	SetCanBeDamaged(false);
+	GetWorldTimerManager().ClearAllTimersForObject(this);
+
+	if (AAIController* AIController = Cast<AAIController>(GetController()))
+	{
+		AIController->StopMovement();
+	}
+
+	GetCharacterMovement()->StopMovementImmediately();
+	SetActorEnableCollision(false);
+
+	UE_LOG(LogTemp, Warning, TEXT("Zombie Boss Defeated"));
+
+	Destroy();
 }
 
 void ABossCharacterZombie::UpdateTarget()
