@@ -37,8 +37,8 @@ private:
 
 	void ExecuteBoxTrace();
 
-	//FName StartSocketName = TEXT("StartSocket");
-	//FName EndSocketName = TEXT("EndSocket");
+	FName StartSocketName = TEXT("StartSocket");
+	FName EndSocketName = TEXT("EndSocket");
 
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon | Collision")
 	FVector BoxHalfSize = FVector(5.f, 15.f, 5.f);
