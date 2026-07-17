@@ -5,7 +5,6 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/GameplayStatics.h"
 
-
 // Sets default values
 ATMWeaponBase::ATMWeaponBase()
 {

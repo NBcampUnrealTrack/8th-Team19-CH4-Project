@@ -37,6 +37,8 @@ public:
 		return CurrentWeapon;
 	}
 
+	bool bIsMovingToTarget;
+
 protected:
 
 	virtual void BeginPlay() override;
@@ -59,7 +61,6 @@ private:
 
 	FVector playerActorLocation;
 
-	bool bIsMovingToTarget;
 
 	bool bIsDashToTarget;
 
