@@ -52,6 +52,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Combat")
 	float BaseAttackPower;
 
+	//서폿한테 쉴드를 받았을 경우
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Combat")
+	float Shield;
+
+	// 버프 공격력 증가용
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Combat")
+	float BuffeAttackPower;
+
+	// 버프 이동 속도 증가용
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Combat")
+	float BuffeMoveSpeed;
+
 	// 치명타 확률 (0.0 ~ 1.0, 계산법 ex) 0.2는 20%)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats|Combat", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float CriticalHitChance;
@@ -84,6 +96,12 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnHealthChangedDelegate OnHealthChanged;
+
+	void SetBuffeAttackPower(float BuffeDamage);
+	void SetBuffeSpeed(float BuffeSpeed);
+	void SetShield(float BuffeShield);
+
+	void Heal(float Amount);
 
 protected:
 	// 스태미나 회복 관련 타이머 및 함수 주석 처리

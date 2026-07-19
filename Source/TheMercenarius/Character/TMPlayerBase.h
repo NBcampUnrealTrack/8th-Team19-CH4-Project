@@ -78,4 +78,6 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")//스페이스 사용 에니메이션 몽타주
 	TObjectPtr<UAnimMontage> DashMontage;
+
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 };

@@ -22,11 +22,11 @@ bWIsOnCooldown(false), bEIsOnCooldown(false), bRIsOnCooldown(false), ADuration(5
 
 	if (StateComponent)
 	{
-		StateComponent->MaxHealth = 100.f;
+		StateComponent->MaxHealth = 100.f + StateComponent->Shield;
 		StateComponent->Defense = 10.f;
-		StateComponent->BaseAttackPower = damage;
+		StateComponent->BaseAttackPower = damage + StateComponent->BuffeAttackPower;
 		StateComponent->CriticalHitChance = 0.7f;
-		StateComponent->MovementSpeed = 800.f;
+		StateComponent->MovementSpeed = 800.f + StateComponent->BuffeMoveSpeed;
 
 
 	}

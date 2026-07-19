@@ -79,6 +79,11 @@ private:
 	void RCoolDownFinished();
 
 protected:
+
+	TArray<TWeakObjectPtr<UTMStatComponent>>BufferedTargets;
+	TArray<TWeakObjectPtr<UTMStatComponent>>ShieldedTargets;
+
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill")
 	bool bAIsOnCooldown;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill")
@@ -101,9 +106,19 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill")
 	float RCoolTime;
 
+	void RemoveBuff();
+	void RemoveShield();
+
+
 	FTimerHandle ACooldownTimerHandle;
 	FTimerHandle QCooldownTimerHandle;
+	FTimerHandle BuffTimerHandle;
 	FTimerHandle WCooldownTimerHandle;
 	FTimerHandle ECooldownTimerHandle;
+	FTimerHandle ShieldTimerHandle;
 	FTimerHandle RCooldownTimerHandle;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
+	float damage;
+
 };
