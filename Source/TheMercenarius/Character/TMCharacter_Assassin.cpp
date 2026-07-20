@@ -5,7 +5,6 @@
 #include "Animation/AnimInstance.h"
 #include "Engine/OverlapResult.h" 
 #include "Engine/World.h"
-#include "DrawDebugHelpers.h" 
 #include "Net/UnrealNetwork.h" 
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/Character.h" 
@@ -79,7 +78,7 @@ void ATMCharacter_Assassin::Server_InputSkillQ_Implementation() { Multicast_Play
 void ATMCharacter_Assassin::Multicast_PlaySkillQMontage_Implementation()
 {
 	GetCharacterMovement()->StopMovementImmediately();
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green, TEXT("[Assassin] Q 맹독 찌르기!"));
+
 	if (SkillQMontage && GetMesh()->GetAnimInstance()) GetMesh()->GetAnimInstance()->Montage_Play(SkillQMontage);
 }
 
@@ -87,9 +86,9 @@ void ATMCharacter_Assassin::InputSkillW(const FInputActionValue& Value) { Server
 void ATMCharacter_Assassin::Server_InputSkillW_Implementation() { Multicast_PlaySkillWMontage(); }
 void ATMCharacter_Assassin::Multicast_PlaySkillWMontage_Implementation()
 {
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Black, TEXT("[Assassin] W 그림자 은신!"));
 	if (SkillWMontage && GetMesh()->GetAnimInstance()) GetMesh()->GetAnimInstance()->Montage_Play(SkillWMontage);
 }
+
 void ATMCharacter_Assassin::InputSkillE(const FInputActionValue& Value)
 {
 	// 💡 LaunchCharacter(강제 이동) 코드는 루트 모션을 위해 삭제했습니다.
@@ -104,10 +103,8 @@ void ATMCharacter_Assassin::Server_InputSkillE_Implementation()
 	Multicast_PlaySkillEMontage();
 }
 
-
 void ATMCharacter_Assassin::Multicast_PlaySkillEMontage_Implementation()
 {
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Cyan, TEXT("[Assassin] E 암살자의 스텝!"));
 	if (SkillEMontage && GetMesh()->GetAnimInstance()) GetMesh()->GetAnimInstance()->Montage_Play(SkillEMontage);
 }
 
@@ -116,7 +113,7 @@ void ATMCharacter_Assassin::Server_InputSkillR_Implementation() { Multicast_Play
 void ATMCharacter_Assassin::Multicast_PlaySkillRMontage_Implementation()
 {
 	GetCharacterMovement()->StopMovementImmediately();
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("[Assassin] R 칼날 폭풍!"));
+
 	if (SkillRMontage && GetMesh()->GetAnimInstance()) GetMesh()->GetAnimInstance()->Montage_Play(SkillRMontage);
 }
 
@@ -138,7 +135,6 @@ void ATMCharacter_Assassin::ProcessSkillQOverlap()
 	TArray<FOverlapResult> OverlapResults;
 
 	bool bHasOverlap = GetWorld()->OverlapMultiByChannel(OverlapResults, CenterLocation, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeSphere(SkillQRadius), Params);
-	DrawDebugSphere(GetWorld(), CenterLocation, SkillQRadius, 16, FColor::Green, false, 1.0f);
 
 	if (bHasOverlap)
 	{
@@ -163,8 +159,6 @@ void ATMCharacter_Assassin::ProcessSkillQOverlap()
 					FTimerHandle DebuffTimerHandle;
 					FTimerDelegate DebuffDelegate = FTimerDelegate::CreateUObject(this, &ATMCharacter_Assassin::ResetBossDefense, VictimStatComp, OriginalDefense);
 					GetWorld()->GetTimerManager().SetTimer(DebuffTimerHandle, DebuffDelegate, SkillQDuration, false);
-
-					if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green, TEXT("[Debuff] 적 방어력 감소!"));
 				}
 			}
 		}
@@ -176,7 +170,6 @@ void ATMCharacter_Assassin::ResetBossDefense(UTMStatComponent* BossStatComp, flo
 	if (IsValid(BossStatComp))
 	{
 		BossStatComp->Defense = OriginalDefense;
-		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green, TEXT("[Debuff] 보스 방어력 원상복구!"));
 	}
 }
 
@@ -194,7 +187,6 @@ void ATMCharacter_Assassin::ProcessSkillWOverlap()
 		bIsStealth = true;
 		GetCharacterMovement()->MaxWalkSpeed += SkillWSpeedBuff;
 
-		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Black, TEXT("[Buff] 은신 활성화! 이동속도 증가!"));
 		GetWorld()->GetTimerManager().SetTimer(WBuffTimerHandle, this, &ATMCharacter_Assassin::ResetWBuff, SkillWDuration, false);
 	}
 }
@@ -203,7 +195,6 @@ void ATMCharacter_Assassin::ResetWBuff()
 {
 	bIsStealth = false;
 	GetCharacterMovement()->MaxWalkSpeed -= SkillWSpeedBuff;
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::White, TEXT("[Buff] 은신 종료!"));
 }
 
 /* ---------------------------------------------------------
@@ -216,7 +207,6 @@ void ATMCharacter_Assassin::ProcessSkillEOverlap()
 	TArray<FOverlapResult> OverlapResults;
 
 	bool bHasOverlap = GetWorld()->OverlapMultiByChannel(OverlapResults, CenterLocation, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeSphere(SkillERadius), Params);
-	DrawDebugSphere(GetWorld(), CenterLocation, SkillERadius, 16, FColor::Cyan, false, 1.0f);
 
 	if (bHasOverlap)
 	{
@@ -241,7 +231,6 @@ void ATMCharacter_Assassin::ProcessSkillROverlap()
 	TArray<FOverlapResult> OverlapResults;
 
 	bool bHasOverlap = GetWorld()->OverlapMultiByChannel(OverlapResults, CenterLocation, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeSphere(SkillRRadius), Params);
-	DrawDebugSphere(GetWorld(), CenterLocation, SkillRRadius, 16, FColor::Red, false, 1.0f);
 
 	if (bHasOverlap)
 	{

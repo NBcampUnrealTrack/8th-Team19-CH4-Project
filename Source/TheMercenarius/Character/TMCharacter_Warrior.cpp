@@ -5,7 +5,6 @@
 #include "Animation/AnimInstance.h"
 #include "Engine/OverlapResult.h" 
 #include "Engine/World.h"
-#include "DrawDebugHelpers.h" 
 #include "Net/UnrealNetwork.h" 
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/Character.h" 
@@ -77,7 +76,7 @@ void ATMCharacter_Warrior::Server_InputSkillQ_Implementation() { Multicast_PlayS
 void ATMCharacter_Warrior::Multicast_PlaySkillQMontage_Implementation()
 {
 	GetCharacterMovement()->StopMovementImmediately();
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("[Warrior] Q 대지가르기!"));
+
 	if (SkillQMontage && GetMesh()->GetAnimInstance()) GetMesh()->GetAnimInstance()->Montage_Play(SkillQMontage);
 }
 
@@ -89,7 +88,7 @@ void ATMCharacter_Warrior::Server_InputSkillW_Implementation() { Multicast_PlayS
 void ATMCharacter_Warrior::Multicast_PlaySkillWMontage_Implementation()
 {
 	GetCharacterMovement()->StopMovementImmediately();
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Orange, TEXT("[Warrior] W 분노의 함성!"));
+
 	if (SkillWMontage && GetMesh()->GetAnimInstance()) GetMesh()->GetAnimInstance()->Montage_Play(SkillWMontage);
 }
 
@@ -100,10 +99,10 @@ void ATMCharacter_Warrior::InputSkillE(const FInputActionValue& Value) { Server_
 void ATMCharacter_Warrior::Server_InputSkillE_Implementation() { Multicast_PlaySkillEMontage(); }
 void ATMCharacter_Warrior::Multicast_PlaySkillEMontage_Implementation()
 {
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Purple, TEXT("[Warrior] E 차지 스트라이크!"));
+
 	if (SkillEMontage && GetMesh()->GetAnimInstance()) GetMesh()->GetAnimInstance()->Montage_Play(SkillEMontage);
 
-	// 💡 [핵심] 캐릭터가 바보는 정면(마우스/카메라 방향)으로 훅 날려보냅니다!
+	// 💡 [핵심] 캐릭터가 바라보는 정면(마우스/카메라 방향)으로 훅 날려보냅니다!
 	FVector DashDirection = GetActorForwardVector();
 	LaunchCharacter(DashDirection * SkillEDashSpeed, true, true);
 }
@@ -116,7 +115,7 @@ void ATMCharacter_Warrior::Server_InputSkillR_Implementation() { Multicast_PlayS
 void ATMCharacter_Warrior::Multicast_PlaySkillRMontage_Implementation()
 {
 	GetCharacterMovement()->StopMovementImmediately();
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("[Warrior] R 풀스윙!"));
+
 	if (SkillRMontage && GetMesh()->GetAnimInstance()) GetMesh()->GetAnimInstance()->Montage_Play(SkillRMontage);
 }
 
@@ -136,7 +135,6 @@ void ATMCharacter_Warrior::ProcessSphereOverlap()
 	TArray<FOverlapResult> OverlapResults;
 
 	bool bHasOverlap = GetWorld()->OverlapMultiByChannel(OverlapResults, CenterLocation, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeSphere(SkillQRadius), Params);
-	DrawDebugSphere(GetWorld(), CenterLocation, SkillQRadius, 16, FColor::Yellow, false, 2.0f);
 
 	if (bHasOverlap)
 	{
@@ -180,13 +178,12 @@ void ATMCharacter_Warrior::ProcessSkillWOverlap()
 		if (GetWorld()->GetTimerManager().IsTimerActive(WBuffTimerHandle))
 		{
 			GetWorld()->GetTimerManager().SetTimer(WBuffTimerHandle, this, &ATMCharacter_Warrior::ResetWBuff, SkillWDuration, false);
-			if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Orange, TEXT("[Buff] 분노의 함성 시간 갱신!"));
 		}
 		else
 		{
 			StatComp->Defense += SkillWDefenseBuff;
 			StatComp->BaseAttackPower += SkillWAttackBuff;
-			if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Orange, TEXT("[Buff] 분노의 함성! 5초간 공/방 증가!"));
+
 			GetWorld()->GetTimerManager().SetTimer(WBuffTimerHandle, this, &ATMCharacter_Warrior::ResetWBuff, SkillWDuration, false);
 		}
 	}
@@ -198,7 +195,6 @@ void ATMCharacter_Warrior::ResetWBuff()
 	{
 		StatComp->Defense -= SkillWDefenseBuff;
 		StatComp->BaseAttackPower -= SkillWAttackBuff;
-		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, TEXT("[Buff] 분노의 함성 종료!"));
 	}
 }
 
@@ -210,7 +206,6 @@ void ATMCharacter_Warrior::ProcessSkillEOverlap()
 	TArray<FOverlapResult> OverlapResults;
 
 	bool bHasOverlap = GetWorld()->OverlapMultiByChannel(OverlapResults, CenterLocation, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeSphere(SkillERadius), Params);
-	DrawDebugSphere(GetWorld(), CenterLocation, SkillERadius, 16, FColor::Purple, false, 1.0f);
 
 	if (bHasOverlap)
 	{
@@ -233,7 +228,6 @@ void ATMCharacter_Warrior::ProcessSkillROverlap()
 	TArray<FOverlapResult> OverlapResults;
 
 	bool bHasOverlap = GetWorld()->OverlapMultiByChannel(OverlapResults, CenterLocation, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeSphere(SkillRRadius), Params);
-	DrawDebugSphere(GetWorld(), CenterLocation, SkillRRadius, 16, FColor::Red, false, 1.0f);
 
 	if (bHasOverlap)
 	{
