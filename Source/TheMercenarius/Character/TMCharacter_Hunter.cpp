@@ -72,7 +72,6 @@ void ATMCharacter_Hunter::InputSkillA(const FInputActionValue& Value)
 	}
 	useASkill = true;
 	StateComponent->BaseAttackPower = damage * 3.5f;
-	UKismetSystemLibrary::PrintString(this, "Damage Up: %s", true, true, FLinearColor::Blue, 10.f);
 
 	GetWorld()->GetTimerManager().SetTimer(ADurationTimerHandle, this, &ATMCharacter_Hunter::ASkillFinished, ADuration, false);
 }
@@ -113,7 +112,6 @@ void ATMCharacter_Hunter::InputSkillQ(const FInputActionValue& Value)
 
 void ATMCharacter_Hunter::InputSkillW(const FInputActionValue& Value)
 {
-	UKismetSystemLibrary::PrintString(this, "Use Granade!", true, true, FLinearColor::Blue, 10.f);
 	ATMPlayerBase* PlayerBase = Cast<ATMPlayerBase>(this);
 	if (bWIsOnCooldown == true)
 	{
@@ -259,16 +257,6 @@ void ATMCharacter_Hunter::PerformSwiftShot()
 	AttackSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	AttackSphere->UpdateOverlaps();
 
-	DrawDebugSphere(
-		GetWorld(),
-		AttackSphere->GetComponentLocation(),
-		AttackSphere->GetScaledSphereRadius(),
-		16,
-		FColor::Red,
-		false,
-		1.f
-	);
-
 	TArray<AActor*> OverlappingActors;
 	AttackSphere->GetOverlappingActors(OverlappingActors);
 
@@ -287,7 +275,6 @@ void ATMCharacter_Hunter::PerformSwiftShot()
 		{
 			UGameplayStatics::ApplyDamage(Target, StateComponent->BaseAttackPower * 2.5f, GetController(), this, UDamageType::StaticClass());
 
-			UKismetSystemLibrary::PrintString(this, "Attack!", true, true, FLinearColor::Blue, 10.f);
 
 		}
 	}
@@ -357,7 +344,6 @@ void ATMCharacter_Hunter::PerformDesperado()
 	FCollisionQueryParams QueryParams;
 	QueryParams.AddIgnoredActor(this);
 
-	DrawDebugSphere(GetWorld(), CenterLocation, DesperadoRadius, 16, FColor::Yellow, false, DesperadoDamageInterval);
 
 	bool bHasHit = GetWorld()->SweepMultiByChannel(
 		HitResults,
@@ -385,7 +371,6 @@ void ATMCharacter_Hunter::PerformDesperado()
 				this,
 				UDamageType::StaticClass()
 			);
-			UKismetSystemLibrary::PrintString(this, "Attack!", true, true, FLinearColor::Blue, 10.f);
 		}
 	}
 }
@@ -419,7 +404,6 @@ void ATMCharacter_Hunter::PerformShotgunShot()
 	FCollisionQueryParams QueryParams;
 	QueryParams.AddIgnoredActor(this);
 
-	DrawDebugSphere(GetWorld(), CameraOrActorLocation, ShotgunRange, 12, FColor::Blue, false, 0.2f);
 
 	bool bHasHit = GetWorld()->SweepMultiByChannel(
 		HitResults, CameraOrActorLocation, CameraOrActorLocation, FQuat::Identity, ECC_Pawn, SphereShape, QueryParams
@@ -447,7 +431,6 @@ void ATMCharacter_Hunter::PerformShotgunShot()
 					this,
 					UDamageType::StaticClass()
 				);
-				DrawDebugLine(GetWorld(), CameraOrActorLocation, Target->GetActorLocation(), FColor::Blue, false, 0.2f, 0, 3.f);
 			}
 		}
 	}
@@ -476,8 +459,6 @@ void ATMCharacter_Hunter::PerformShotgunFinisher()
 	FCollisionQueryParams QueryParams;
 	QueryParams.AddIgnoredActor(this);
 
-	DrawDebugSphere(GetWorld(), CameraOrActorLocation, FinisherRange, 16, FColor::Blue, false, 0.5f);
-
 	bool bHasHit = GetWorld()->SweepMultiByChannel(
 		HitResults, CameraOrActorLocation, CameraOrActorLocation, FQuat::Identity, ECC_Pawn, SphereShape, QueryParams
 	);
@@ -504,7 +485,6 @@ void ATMCharacter_Hunter::PerformShotgunFinisher()
 					this,
 					UDamageType::StaticClass()
 				);
-				DrawDebugLine(GetWorld(), CameraOrActorLocation, Target->GetActorLocation(), FColor::Blue, false, 0.5f, 0, 8.f);
 			}
 		}
 	}

@@ -89,7 +89,6 @@ void ATMPlayerBase::Tick(float DeltaTime)
 			return;
 		}
 		FVector currentLocation = GetActorLocation();
-		FString actorLocation = FString::Printf(TEXT("ActorLocation : X = %.f, Y = %.f, Z = %.f"), currentLocation.X, currentLocation.Y, currentLocation.Z);
 		float distanceToTarget = FVector::Dist(currentLocation, targetLocation);
 		if (distanceToTarget <= arriveToIerance)
 		{	
@@ -98,14 +97,12 @@ void ATMPlayerBase::Tick(float DeltaTime)
 			GetCharacterMovement()->ClearAccumulatedForces();
 			ConsumeMovementInputVector();
 			SetActorLocation(targetLocation, true);
-			UKismetSystemLibrary::PrintString(this, actorLocation, true, true, FLinearColor::Blue, 10.f);
 			bIsMovingToTarget = false;
 
 			return;
 		}
 		else
 		{
-			UKismetSystemLibrary::PrintString(this, actorLocation, true, true, FLinearColor::Green, 10.f);
 			FVector moveDirection = (targetLocation - currentLocation).GetSafeNormal2D();
 			AddMovementInput(moveDirection, 1.f);
 		}
@@ -116,8 +113,6 @@ void ATMPlayerBase::SetMoveToTarget(const FVector& NewTarget)
 {
 	targetLocation = FVector(NewTarget.X, NewTarget.Y, GetActorLocation().Z);
 	bIsMovingToTarget = true;
-	FString targetVector = FString::Printf(TEXT("Tarrget Location : X = %f, Y = %f, Z = %f"), targetLocation.X, targetLocation.Y, targetLocation.Z);
-	UKismetSystemLibrary::PrintString(this, targetVector, true, true, FLinearColor::Red, 10.f);
 }
 
 void ATMPlayerBase::DashToTarget(const FVector& newTarget)
@@ -144,8 +139,6 @@ void ATMPlayerBase::DashToTarget(const FVector& newTarget)
 	}
 	// ------------------------------------
 
-	FString targetVector = FString::Printf(TEXT("Tarrget Location : X = %f, Y = %f, Z = %f"), dashLocation.X, dashLocation.Y, dashLocation.Z);
-	UKismetSystemLibrary::PrintString(this, targetVector, true, true, FLinearColor::White, 10.f);
 }
 
 void ATMPlayerBase::StopDash()
