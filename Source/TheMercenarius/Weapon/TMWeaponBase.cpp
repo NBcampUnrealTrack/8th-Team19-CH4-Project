@@ -4,7 +4,7 @@
 #include "Weapon/TMWeaponBase.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/GameplayStatics.h"
-
+#include "Character/TMPlayerBase.h"
 
 // Sets default values
 ATMWeaponBase::ATMWeaponBase()
@@ -46,17 +46,18 @@ void ATMWeaponBase::SetWeaponCollision(bool bEnable)
 
 void ATMWeaponBase::ExecuteBoxTrace()
 {
-	//FVector StartPos = WeaponMesh->GetSocketLocation(StartSocketName);
-	//FVector EndPos = WeaponMesh->GetSocketLocation(EndSocketName);
+	FVector StartPos = WeaponMesh->GetSocketLocation(StartSocketName);
+	FVector EndPos = WeaponMesh->GetSocketLocation(EndSocketName);
 
-	//FRotator TraceRotation = WeaponMesh->GetComponentRotation();
 
-	//TArray<FHitResult> HitResults;
-	//TArray<AActor*> ActorsToIgnore;
-	//ActorsToIgnore.Add(this);
-	//ActorsToIgnore.Add(GetOwner());
+	FRotator TraceRotation = WeaponMesh->GetComponentRotation();
 
-	/*bool bHit = UKismetSystemLibrary::BoxTraceMulti(GetWorld(),
+	TArray<FHitResult> HitResults;
+	TArray<AActor*> ActorsToIgnore;
+	ActorsToIgnore.Add(this);
+	ActorsToIgnore.Add(GetOwner());
+
+	bool bHit = UKismetSystemLibrary::BoxTraceMulti(GetWorld(),
 		StartPos,
 		EndPos,
 		BoxHalfSize,
@@ -72,17 +73,20 @@ void ATMWeaponBase::ExecuteBoxTrace()
 	{
 		for(const FHitResult& Hit : HitResults)
 		{
-			HitActors.Add(HitActor);
+			AActor* HitActor = Hit.GetActor();
+			if (HitActor && !HitActors.Contains(HitActor))
+			{
+				HitActors.Add(HitActor);
 
-			UGameplayStatics::ApplyDamage(
-			HitActor,
-			damage,
-			GetInstigatorController(),
-			this,
-			UDamageType::StaticClass()
-			);
+				UGameplayStatics::ApplyDamage(
+					HitActor,
+					damage,
+					GetInstigatorController(),
+					this,
+					UDamageType::StaticClass()
+				);
+			}
 		}
 	}
-	현재 주석은 무기 소켓의 시작과 끝 부분을 지정하면 제거 할 예정
-	*/
+	//아군 공격하는 문제가 있음
 }

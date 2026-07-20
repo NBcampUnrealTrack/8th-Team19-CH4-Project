@@ -9,6 +9,7 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "Animation/AnimInstance.h"
 #include "Weapon/TMWeaponBase.h"
+#include "Game/TMStatComponent.h"
 
 // Sets default values
 ATMPlayerBase::ATMPlayerBase() : bIsMovingToTarget(false), bIsDashToTarget(false), arriveToIerance(5.f), dashRange(500.f)
@@ -165,4 +166,35 @@ void ATMPlayerBase::Attack()
 			PlayAnimMontage(AttackMontage);
 		}
 	}
+}
+
+float ATMPlayerBase::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser)
+{
+	UTMStatComponent* State = FindComponentByClass<UTMStatComponent>();
+	if (!State)
+	{
+		return 0.f;
+	}
+
+	float RemainingDamage = DamageAmount;
+
+	if (State->Shield > 0.f)
+	{
+		if (State->Shield >= RemainingDamage)
+		{
+			State->Shield -= RemainingDamage;
+			RemainingDamage = 0.f;
+		}
+		else
+		{
+			RemainingDamage -= State->Shield;
+			State->Shield = 0.f;
+		}
+	}
+	if (RemainingDamage > 0.f)
+	{
+		return Super::TakeDamage(RemainingDamage, DamageEvent, EventInstigator, DamageCauser);
+	}
+
+	return DamageAmount;
 }

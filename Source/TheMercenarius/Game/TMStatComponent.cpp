@@ -3,7 +3,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Math/UnrealMathUtility.h"
 
-UTMStatComponent::UTMStatComponent()
+UTMStatComponent::UTMStatComponent() : BuffeAttackPower(0.f), BuffeMoveSpeed(0.f), Shield(0.f)
 {
 	PrimaryComponentTick.bCanEverTick = false;
 
@@ -83,3 +83,38 @@ void UTMStatComponent::RegenerateStamina()
 	CurrentStamina = FMath::Clamp(CurrentStamina + (StaminaRegenRate * 0.1f), 0.0f, MaxStamina);
 }
 */
+
+void UTMStatComponent::SetBuffeAttackPower(float BuffeDamage)
+{
+	BuffeAttackPower = BuffeDamage;
+
+	if (BuffeDamage <= KINDA_SMALL_NUMBER)
+	{
+		BuffeAttackPower = 0;
+	}
+}
+
+void UTMStatComponent::SetBuffeSpeed(float BuffeSpeed)
+{
+	BuffeMoveSpeed = BuffeSpeed;
+
+	if (BuffeSpeed <= KINDA_SMALL_NUMBER)
+	{
+		BuffeMoveSpeed = 0;
+	}
+}
+
+void UTMStatComponent::SetShield(float BuffeShield)
+{
+	Shield = BuffeShield;
+
+	if (BuffeShield <= KINDA_SMALL_NUMBER)
+	{
+		BuffeAttackPower = 0;
+	}
+}
+
+void UTMStatComponent::Heal(float Amount)
+{
+	CurrentHealth = FMath::Clamp(CurrentHealth + Amount, 0.f, MaxHealth);
+}
