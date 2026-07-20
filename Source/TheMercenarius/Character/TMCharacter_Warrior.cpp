@@ -8,8 +8,8 @@
 #include "DrawDebugHelpers.h" 
 #include "Net/UnrealNetwork.h" 
 #include "Kismet/GameplayStatics.h"
-#include "GameFramework/Character.h" // ACharacter 형변환용
-#include "TimerManager.h"            //  3초 타이머용
+#include "GameFramework/Character.h" 
+#include "TimerManager.h"            
 
 ATMCharacter_Warrior::ATMCharacter_Warrior()
 {
@@ -22,17 +22,27 @@ ATMCharacter_Warrior::ATMCharacter_Warrior()
 		StatComp->CriticalHitChance = 0.05f;
 		StatComp->MovementSpeed = 550.0f;
 
+		// Q 스킬 기본값
 		SkillQRadius = 300.0f;
 		SkillQDamage = 50.0f;
 		SkillQSlowModifier = 0.4f;
 		SkillQSlowDuration = 3.0f;
 
-		//R 스킬 기본값 
-		SkillRRadius = 400.0f; // Q보다 더 넓은 360도 반경
-		SkillRDamage = 20.0f;  // 연타로 때릴 것이므로 1타당 20
+		// W 스킬 기본값 (공/방 버프)
+		SkillWDuration = 5.0f;
+		SkillWDefenseBuff = 30.0f;
+		SkillWAttackBuff = 20.0f;
+
+		// E 스킬 기본값 (차지 스트라이크)
+		SkillERadius = 300.0f;
+		SkillEDamage = 40.0f;
+		SkillEDashSpeed = 1500.0f; // 앞으로 돌진하는 힘
+
+		// R 스킬 기본값
+		SkillRRadius = 400.0f;
+		SkillRDamage = 20.0f;
 	}
 	GetCharacterMovement()->MaxWalkSpeed = 550.0f;
-
 	bReplicates = true;
 }
 
@@ -52,189 +62,98 @@ void ATMCharacter_Warrior::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
-		if (SkillQAction)
-			EnhancedInputComponent->BindAction(SkillQAction, ETriggerEvent::Started, this, &ATMCharacter_Warrior::InputSkillQ);
-
-		if (SkillWAction)
-			EnhancedInputComponent->BindAction(SkillWAction, ETriggerEvent::Started, this, &ATMCharacter_Warrior::InputSkillW);
-
-		if (SkillEAction)
-			EnhancedInputComponent->BindAction(SkillEAction, ETriggerEvent::Started, this, &ATMCharacter_Warrior::InputSkillE);
-
-		if (SkillRAction)
-			EnhancedInputComponent->BindAction(SkillRAction, ETriggerEvent::Started, this, &ATMCharacter_Warrior::InputSkillR);
+		if (SkillQAction) EnhancedInputComponent->BindAction(SkillQAction, ETriggerEvent::Started, this, &ATMCharacter_Warrior::InputSkillQ);
+		if (SkillWAction) EnhancedInputComponent->BindAction(SkillWAction, ETriggerEvent::Started, this, &ATMCharacter_Warrior::InputSkillW);
+		if (SkillEAction) EnhancedInputComponent->BindAction(SkillEAction, ETriggerEvent::Started, this, &ATMCharacter_Warrior::InputSkillE);
+		if (SkillRAction) EnhancedInputComponent->BindAction(SkillRAction, ETriggerEvent::Started, this, &ATMCharacter_Warrior::InputSkillR);
 	}
 }
 
 /* ---------------------------------------------------------
- * 스킬 실제 구현부 (멀티플레이 적용)
+ * Q 스킬 (대지가르기)
  * --------------------------------------------------------- */
-void ATMCharacter_Warrior::InputSkillQ(const FInputActionValue& Value)
-{
-	Server_InputSkillQ();
-}
-
-void ATMCharacter_Warrior::Server_InputSkillQ_Implementation()
-{
-	Multicast_PlaySkillQMontage();
-}
-
+void ATMCharacter_Warrior::InputSkillQ(const FInputActionValue& Value) { Server_InputSkillQ(); }
+void ATMCharacter_Warrior::Server_InputSkillQ_Implementation() { Multicast_PlaySkillQMontage(); }
 void ATMCharacter_Warrior::Multicast_PlaySkillQMontage_Implementation()
 {
 	GetCharacterMovement()->StopMovementImmediately();
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("[Warrior] Multi Q Active!"));
-
-	if (SkillQMontage)
-	{
-		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-		if (AnimInstance)
-		{
-			AnimInstance->Montage_Play(SkillQMontage);
-		}
-	}
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("[Warrior] Q 대지가르기!"));
+	if (SkillQMontage && GetMesh()->GetAnimInstance()) GetMesh()->GetAnimInstance()->Montage_Play(SkillQMontage);
 }
 
-// ---------------------------------------------------------
-// W 스킬 (분노의 함성 )
-// ---------------------------------------------------------
-void ATMCharacter_Warrior::InputSkillW(const FInputActionValue& Value)
-{
-	Server_InputSkillW();
-}
-
-void ATMCharacter_Warrior::Server_InputSkillW_Implementation()
-{
-	Multicast_PlaySkillWMontage();
-}
-
+/* ---------------------------------------------------------
+ * W 스킬 (분노의 함성 - 자가 버프)
+ * --------------------------------------------------------- */
+void ATMCharacter_Warrior::InputSkillW(const FInputActionValue& Value) { Server_InputSkillW(); }
+void ATMCharacter_Warrior::Server_InputSkillW_Implementation() { Multicast_PlaySkillWMontage(); }
 void ATMCharacter_Warrior::Multicast_PlaySkillWMontage_Implementation()
 {
 	GetCharacterMovement()->StopMovementImmediately();
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Orange, TEXT("[Warrior] Multi W Active!"));
-
-	if (SkillWMontage)
-	{
-		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-		if (AnimInstance) AnimInstance->Montage_Play(SkillWMontage);
-	}
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Orange, TEXT("[Warrior] W 분노의 함성!"));
+	if (SkillWMontage && GetMesh()->GetAnimInstance()) GetMesh()->GetAnimInstance()->Montage_Play(SkillWMontage);
 }
 
-// ---------------------------------------------------------
-// E 스킬 (차지 스트라이크 )
-// ---------------------------------------------------------
-void ATMCharacter_Warrior::InputSkillE(const FInputActionValue& Value)
-{
-	Server_InputSkillE();
-}
-
-void ATMCharacter_Warrior::Server_InputSkillE_Implementation()
-{
-	Multicast_PlaySkillEMontage();
-}
-
+/* ---------------------------------------------------------
+ * E 스킬 (차지 스트라이크 - 마우스 방향 돌진)
+ * --------------------------------------------------------- */
+void ATMCharacter_Warrior::InputSkillE(const FInputActionValue& Value) { Server_InputSkillE(); }
+void ATMCharacter_Warrior::Server_InputSkillE_Implementation() { Multicast_PlaySkillEMontage(); }
 void ATMCharacter_Warrior::Multicast_PlaySkillEMontage_Implementation()
 {
-	GetCharacterMovement()->StopMovementImmediately();
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Purple, TEXT("[Warrior] Multi E Active!"));
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Purple, TEXT("[Warrior] E 차지 스트라이크!"));
+	if (SkillEMontage && GetMesh()->GetAnimInstance()) GetMesh()->GetAnimInstance()->Montage_Play(SkillEMontage);
 
-	if (SkillEMontage)
-	{
-		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-		if (AnimInstance) AnimInstance->Montage_Play(SkillEMontage);
-	}
+	// 💡 [핵심] 캐릭터가 바보는 정면(마우스/카메라 방향)으로 훅 날려보냅니다!
+	FVector DashDirection = GetActorForwardVector();
+	LaunchCharacter(DashDirection * SkillEDashSpeed, true, true);
 }
 
-// ---------------------------------------------------------
-// R 스킬 (궁극기)
-// ---------------------------------------------------------
-void ATMCharacter_Warrior::InputSkillR(const FInputActionValue& Value)
-{
-	Server_InputSkillR();
-}
-
-void ATMCharacter_Warrior::Server_InputSkillR_Implementation()
-{
-	Multicast_PlaySkillRMontage();
-}
-
+/* ---------------------------------------------------------
+ * R 스킬 (풀스윙 - 360도 연타)
+ * --------------------------------------------------------- */
+void ATMCharacter_Warrior::InputSkillR(const FInputActionValue& Value) { Server_InputSkillR(); }
+void ATMCharacter_Warrior::Server_InputSkillR_Implementation() { Multicast_PlaySkillRMontage(); }
 void ATMCharacter_Warrior::Multicast_PlaySkillRMontage_Implementation()
 {
 	GetCharacterMovement()->StopMovementImmediately();
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("[Warrior] Multi R Active!"));
-
-	if (SkillRMontage)
-	{
-		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-		if (AnimInstance) AnimInstance->Montage_Play(SkillRMontage);
-	}
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("[Warrior] R 풀스윙!"));
+	if (SkillRMontage && GetMesh()->GetAnimInstance()) GetMesh()->GetAnimInstance()->Montage_Play(SkillRMontage);
 }
 
-// ---------------------------------------------------------
-// Q 스킬 범위 판정 로직 (애님 노티파이에서 호출됨)
-// ---------------------------------------------------------
-void ATMCharacter_Warrior::ExecuteSkillQImpact()
-{
-	if (HasAuthority())
-	{
-		ProcessSphereOverlap();
-	}
-}
+/* ---------------------------------------------------------
+ * 스킬 충돌 및 버프 실행 (애님 노티파이 연동)
+ * --------------------------------------------------------- */
+void ATMCharacter_Warrior::ExecuteSkillQImpact() { if (HasAuthority()) ProcessSphereOverlap(); }
+void ATMCharacter_Warrior::ExecuteSkillWImpact() { if (HasAuthority()) ProcessSkillWOverlap(); }
+void ATMCharacter_Warrior::ExecuteSkillEImpact() { if (HasAuthority()) ProcessSkillEOverlap(); }
+void ATMCharacter_Warrior::ExecuteSkillRImpact() { if (HasAuthority()) ProcessSkillROverlap(); }
 
+// Q 스킬 판정 (슬로우 디버프 포함)
 void ATMCharacter_Warrior::ProcessSphereOverlap()
 {
 	FVector CenterLocation = GetActorLocation() + GetActorForwardVector() * 100.f;
 	FCollisionQueryParams Params(NAME_None, false, this);
-
 	TArray<FOverlapResult> OverlapResults;
 
-	bool bHasOverlap = GetWorld()->OverlapMultiByChannel(
-		OverlapResults,
-		CenterLocation,
-		FQuat::Identity,
-		ECC_Pawn,
-		FCollisionShape::MakeSphere(SkillQRadius),
-		Params
-	);
+	bool bHasOverlap = GetWorld()->OverlapMultiByChannel(OverlapResults, CenterLocation, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeSphere(SkillQRadius), Params);
+	DrawDebugSphere(GetWorld(), CenterLocation, SkillQRadius, 16, FColor::Yellow, false, 2.0f);
 
-	DrawDebugSphere(GetWorld(), CenterLocation, SkillQRadius, 16, FColor::Red, false, 3.0f);
-
-	if (bHasOverlap == true)
+	if (bHasOverlap)
 	{
 		for (const FOverlapResult& Result : OverlapResults)
 		{
 			AActor* OverlappedActor = Result.GetActor();
-			if (IsValid(OverlappedActor) == true && OverlappedActor != this)
+			if (IsValid(OverlappedActor) && OverlappedActor != this)
 			{
-				GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Green,
-					FString::Printf(TEXT("[Hit - Server] %s to %f hit damage!"), *OverlappedActor->GetName(), SkillQDamage));
+				UGameplayStatics::ApplyDamage(OverlappedActor, SkillQDamage, GetController(), this, UDamageType::StaticClass());
 
-				UGameplayStatics::ApplyDamage(
-					OverlappedActor,
-					SkillQDamage,
-					GetController(),
-					this,
-					UDamageType::StaticClass()
-				);
-				// 👇 [추가] 3. 🐌 슬로우 디버프 적용!
-				// 때린 대상이 '캐릭터' 형태인지 확인합니다. (보스 쥐는 캐릭터입니다)
 				if (ACharacter* HitCharacter = Cast<ACharacter>(OverlappedActor))
 				{
-					// 캐릭터의 무브먼트 컴포넌트(이동 담당)가 있는지 확인
 					if (HitCharacter->GetCharacterMovement())
 					{
-						// ① 원래 속도 기억하기
 						float OriginalSpeed = HitCharacter->GetCharacterMovement()->MaxWalkSpeed;
+						HitCharacter->GetCharacterMovement()->MaxWalkSpeed = OriginalSpeed * (1.0f - SkillQSlowModifier);
 
-						// ② 40% 느려진 속도 계산 (원래 속도 * 0.6)
-						float SlowedSpeed = OriginalSpeed * (1.0f - SkillQSlowModifier);
-
-						// ③ 보스 속도 강제로 깎기
-						HitCharacter->GetCharacterMovement()->MaxWalkSpeed = SlowedSpeed;
-
-						// ④ 로그 띄우기
-						if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Cyan, TEXT("[Debuff] 보스 이동속도 40% 감소!"));
-
-						// ⑤ 3초(SkillQSlowDuration) 뒤에 원래 속도로 복구하는 예약 타이머 걸기!
 						FTimerHandle SlowTimerHandle;
 						FTimerDelegate SlowDelegate = FTimerDelegate::CreateUObject(this, &ATMCharacter_Warrior::ResetTargetSpeed, HitCharacter, OriginalSpeed);
 						GetWorld()->GetTimerManager().SetTimer(SlowTimerHandle, SlowDelegate, SkillQSlowDuration, false);
@@ -244,68 +163,86 @@ void ATMCharacter_Warrior::ProcessSphereOverlap()
 		}
 	}
 }
-// ---------------------------------------------------------
-// 디버프 타이머 복구 함수
-// ---------------------------------------------------------
+
 void ATMCharacter_Warrior::ResetTargetSpeed(ACharacter* TargetCharacter, float OriginalSpeed)
 {
-	// 3초라는 시간 동안 보스가 죽어서 시체가 사라졌을 수도 있으니 안전 검사(IsValid)를 합니다.
 	if (IsValid(TargetCharacter) && TargetCharacter->GetCharacterMovement())
 	{
-		// 보스의 걷기 속도를 아까 기억해둔 원래 속도로 되돌립니다.
 		TargetCharacter->GetCharacterMovement()->MaxWalkSpeed = OriginalSpeed;
-
-		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Cyan, TEXT("[Debuff] 보스 이동속도 원상복구!"));
 	}
 }
-// ---------------------------------------------------------
-// R 스킬 범위 판정 로직 (풀스윙 360도)
-// ---------------------------------------------------------
-void ATMCharacter_Warrior::ExecuteSkillRImpact()
+
+// W 스킬 판정 (순수 공/방 버프)
+void ATMCharacter_Warrior::ProcessSkillWOverlap()
 {
-	if (HasAuthority())
+	if (StatComp)
 	{
-		ProcessSkillROverlap();
+		if (GetWorld()->GetTimerManager().IsTimerActive(WBuffTimerHandle))
+		{
+			GetWorld()->GetTimerManager().SetTimer(WBuffTimerHandle, this, &ATMCharacter_Warrior::ResetWBuff, SkillWDuration, false);
+			if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Orange, TEXT("[Buff] 분노의 함성 시간 갱신!"));
+		}
+		else
+		{
+			StatComp->Defense += SkillWDefenseBuff;
+			StatComp->BaseAttackPower += SkillWAttackBuff;
+			if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Orange, TEXT("[Buff] 분노의 함성! 5초간 공/방 증가!"));
+			GetWorld()->GetTimerManager().SetTimer(WBuffTimerHandle, this, &ATMCharacter_Warrior::ResetWBuff, SkillWDuration, false);
+		}
 	}
 }
 
-void ATMCharacter_Warrior::ProcessSkillROverlap()
+void ATMCharacter_Warrior::ResetWBuff()
 {
-	// Q와 다르게 앞쪽이 아니라 '내 캐릭터의 중심'에서 구체가 터집니다 (360도 판정)
-	FVector CenterLocation = GetActorLocation();
-	FCollisionQueryParams Params(NAME_None, false, this);
+	if (StatComp)
+	{
+		StatComp->Defense -= SkillWDefenseBuff;
+		StatComp->BaseAttackPower -= SkillWAttackBuff;
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, TEXT("[Buff] 분노의 함성 종료!"));
+	}
+}
 
+// E 스킬 판정 (돌진 후 도끼 타격)
+void ATMCharacter_Warrior::ProcessSkillEOverlap()
+{
+	FVector CenterLocation = GetActorLocation() + GetActorForwardVector() * 100.f;
+	FCollisionQueryParams Params(NAME_None, false, this);
 	TArray<FOverlapResult> OverlapResults;
 
-	bool bHasOverlap = GetWorld()->OverlapMultiByChannel(
-		OverlapResults,
-		CenterLocation,
-		FQuat::Identity,
-		ECC_Pawn,
-		FCollisionShape::MakeSphere(SkillRRadius),
-		Params
-	);
+	bool bHasOverlap = GetWorld()->OverlapMultiByChannel(OverlapResults, CenterLocation, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeSphere(SkillERadius), Params);
+	DrawDebugSphere(GetWorld(), CenterLocation, SkillERadius, 16, FColor::Purple, false, 1.0f);
 
-	// 눈으로 확인하기 위한 보라색 구체 생성 (연타 확인을 위해 1초만 표시)
-	DrawDebugSphere(GetWorld(), CenterLocation, SkillRRadius, 16, FColor::Magenta, false, 1.0f);
-
-	if (bHasOverlap == true)
+	if (bHasOverlap)
 	{
 		for (const FOverlapResult& Result : OverlapResults)
 		{
 			AActor* OverlappedActor = Result.GetActor();
-			if (IsValid(OverlappedActor) == true && OverlappedActor != this)
+			if (IsValid(OverlappedActor) && OverlappedActor != this)
 			{
-				GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Magenta,
-					FString::Printf(TEXT("[Hit - Server] R 풀스윙 적중! %f 데미지"), SkillRDamage));
+				UGameplayStatics::ApplyDamage(OverlappedActor, SkillEDamage, GetController(), this, UDamageType::StaticClass());
+			}
+		}
+	}
+}
 
-				UGameplayStatics::ApplyDamage(
-					OverlappedActor,
-					SkillRDamage,
-					GetController(),
-					this,
-					UDamageType::StaticClass()
-				);
+// R 스킬 판정 (풀스윙 360도 연타)
+void ATMCharacter_Warrior::ProcessSkillROverlap()
+{
+	FVector CenterLocation = GetActorLocation();
+	FCollisionQueryParams Params(NAME_None, false, this);
+	TArray<FOverlapResult> OverlapResults;
+
+	bool bHasOverlap = GetWorld()->OverlapMultiByChannel(OverlapResults, CenterLocation, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeSphere(SkillRRadius), Params);
+	DrawDebugSphere(GetWorld(), CenterLocation, SkillRRadius, 16, FColor::Red, false, 1.0f);
+
+	if (bHasOverlap)
+	{
+		for (const FOverlapResult& Result : OverlapResults)
+		{
+			AActor* OverlappedActor = Result.GetActor();
+			if (IsValid(OverlappedActor) && OverlappedActor != this)
+			{
+				UGameplayStatics::ApplyDamage(OverlappedActor, SkillRDamage, GetController(), this, UDamageType::StaticClass());
 			}
 		}
 	}
